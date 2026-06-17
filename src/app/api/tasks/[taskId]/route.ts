@@ -3,6 +3,7 @@ import { getCurrentUser } from '@/lib/auth';
 import { db, TABLE, GetCommand, UpdateCommand, DeleteCommand, QueryCommand } from '@/lib/dynamodb';
 import { logAction } from '@/lib/audit';
 import { isPresidium, canCreateTask, isTaskVisible, canSubmitTask } from '@/lib/permissions';
+import { autoCloseIfExpired } from '@/lib/tasks';
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ taskId: string }> }) {
   const user = await getCurrentUser();
@@ -23,22 +24,24 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ task
 
     if (!taskResult.Item) return NextResponse.json({ error: 'Task not found' }, { status: 404 });
 
-    let cohortMap = new Map<string, any>();
-    if (taskResult.Item.assignmentType === 'COHORT' && taskResult.Item.assignedToId) {
-      const cohortResult = await db.send(new GetCommand({ TableName: TABLE.COHORTS, Key: { cohortId: taskResult.Item.assignedToId } }));
-      if (cohortResult.Item) cohortMap.set(taskResult.Item.assignedToId, cohortResult.Item);
-    }
+    taskResult.Item.status = await autoCloseIfExpired(taskResult.Item as any);
 
-    if (!isTaskVisible(user, taskResult.Item as any, cohortMap)) {
+    if (!isTaskVisible(user, taskResult.Item as any)) {
       return NextResponse.json({ error: 'Task not found' }, { status: 404 });
     }
 
     const submissions = submissionsResult.Items || [];
-    const mySubmission = submissions.find((s: any) => s.memberId === user.memberId);
+    // A member can have multiple submission attempts (e.g. resubmitting after
+    // a rejection) — "my submission" means the most recent one.
+    const mySubmissions = submissions.filter((s: any) => s.memberId === user.memberId)
+      .sort((a: any, b: any) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+    const mySubmission = mySubmissions[0];
 
     const canReview = isPresidium(user) || user.role === 'DIRECTOR' || user.role === 'MANAGER';
-    const visibleSubmissions = canReview ? submissions : submissions.filter((s: any) => s.memberId === user.memberId);
-    const canSubmit = taskResult.Item.status === 'OPEN' && !mySubmission && canSubmitTask(user, taskResult.Item as any, cohortMap);
+    const visibleSubmissions = canReview ? submissions : mySubmissions;
+    const canSubmit = taskResult.Item.status === 'OPEN'
+      && (!mySubmission || mySubmission.reviewStatus === 'REJECTED')
+      && canSubmitTask(user, taskResult.Item as any);
     const canDelete = isPresidium(user) || taskResult.Item.createdBy === user.memberId;
     const canClose = canReview || taskResult.Item.createdBy === user.memberId;
 
@@ -68,10 +71,13 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ task
 
   try {
     const body = await req.json();
-    const { title, description, deadline, status } = body;
+    const { title, description, deadline, status, priority } = body;
 
     if (status !== undefined && !['OPEN', 'CLOSED'].includes(status)) {
       return NextResponse.json({ error: 'Invalid status value' }, { status: 400 });
+    }
+    if (priority !== undefined && !['LOW', 'MEDIUM', 'HIGH'].includes(priority)) {
+      return NextResponse.json({ error: 'Invalid priority value' }, { status: 400 });
     }
 
     const task = await db.send(new GetCommand({ TableName: TABLE.TASKS, Key: { taskId } }));
@@ -96,7 +102,12 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ task
 
     if (title !== undefined)       { setParts.push('title = :t');      exprValues[':t']  = title; }
     if (description !== undefined) { setParts.push('description = :d'); exprValues[':d']  = description; }
-    if (deadline !== undefined)    { setParts.push('deadline = :dl');   exprValues[':dl'] = deadline; }
+    if (priority !== undefined)    { setParts.push('priority = :p');    exprValues[':p']  = priority; }
+    if (deadline !== undefined) {
+      setParts.push('deadline = :dl', 'reminderSentAt = :null');
+      exprValues[':dl'] = deadline;
+      exprValues[':null'] = null; // new deadline means the old reminder cycle no longer applies
+    }
     if (status !== undefined)      { setParts.push('#s = :s');          exprValues[':s']  = status; }
 
     if (setParts.length === 0) {

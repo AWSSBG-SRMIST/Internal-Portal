@@ -1,0 +1,15 @@
+name: Task deadline reminders
+
+on:
+  schedule:
+    - cron: '0 */6 * * *' # every 6 hours
+  workflow_dispatch: {}
+
+jobs:
+  ping-reminder-endpoint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger /api/cron/task-reminders
+        run: |
+          curl -sf -X GET "${{ secrets.APP_URL }}/api/cron/task-reminders?hoursBefore=24" \
+            -H "x-cron-secret: ${{ secrets.CRON_SECRET }}"

@@ -94,7 +94,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
+    <div className="h-dvh overflow-y-auto bg-slate-950 flex items-center justify-center p-4">
       {/* Background decoration */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-orange-500/5 rounded-full blur-3xl" />
@@ -132,6 +132,7 @@ export default function LoginPage() {
                       value={email}
                       onChange={e => setEmail(e.target.value)}
                       className="pl-9"
+                      autoComplete="email"
                       required
                       disabled={loading}
                     />
@@ -168,6 +169,7 @@ export default function LoginPage() {
                       value={otp}
                       onChange={e => setOtp(e.target.value.replace(/\D/g, ''))}
                       className="pl-9 text-center text-xl font-mono tracking-widest"
+                      autoComplete="one-time-code"
                       required
                       disabled={loading}
                       autoFocus

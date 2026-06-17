@@ -11,7 +11,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { formatDateTime, timeAgo, isDeadlinePassed, getAssignmentTypeColor, getDomainColor, getSubdomainColor } from '@/lib/utils';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { Skeleton } from '@/components/ui/skeleton';
+import { formatDateTime, timeAgo, isDeadlinePassed, getAssignmentTypeColor, getDomainColor, getSubdomainColor, getPriorityColor } from '@/lib/utils';
 import { getSubmissionTimingLabel } from '@/lib/ratings';
 import Link from 'next/link';
 import type { Task, Submission } from '@/types';
@@ -37,6 +39,10 @@ export default function TaskDetailPage({ params }: { params: Promise<{ taskId: s
   const [content, setContent] = useState('');
   const [links, setLinks] = useState<string[]>(['']);
   const [showSubmitForm, setShowSubmitForm] = useState(false);
+  const [feedbackDrafts, setFeedbackDrafts] = useState<Record<string, string>>({});
+  const [confirmClose, setConfirmClose] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [closing, setClosing] = useState(false);
 
   useEffect(() => { fetchTask(); }, [taskId]);
 
@@ -73,33 +79,44 @@ export default function TaskDetailPage({ params }: { params: Promise<{ taskId: s
   }
 
   async function handleReview(submissionId: string, action: 'APPROVE' | 'REJECT') {
+    if (!data) return;
+    const prevData = data;
+    const optimisticStatus = action === 'APPROVE' ? 'APPROVED' : 'REJECTED';
     setReviewing(submissionId + action);
+    // Optimistic: flip the submission's status immediately; reconciled with
+    // authoritative data (ratingAwarded, reviewedByName) once the request settles.
+    setData(d => d ? {
+      ...d,
+      submissions: d.submissions.map(s => s.submissionId === submissionId ? { ...s, reviewStatus: optimisticStatus } : s),
+    } : d);
     try {
       const res = await fetch(`/api/tasks/${taskId}/review`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ submissionId, action }),
+        body: JSON.stringify({ submissionId, action, feedback: feedbackDrafts[submissionId] || '' }),
       });
       const d = await res.json();
-      if (!res.ok) { toast.error(d.error || 'Failed to review'); return; }
+      if (!res.ok) { toast.error(d.error || 'Failed to review'); setData(prevData); return; }
       toast.success(`Submission ${action.toLowerCase()}d! ${d.ratingAwarded ? `Rating: ${d.ratingAwarded > 0 ? '+' : ''}${d.ratingAwarded}⭐` : ''}`);
+      setFeedbackDrafts(f => { const next = { ...f }; delete next[submissionId]; return next; });
       fetchTask();
-    } catch { toast.error('Failed to review submission'); }
+    } catch { toast.error('Failed to review submission'); setData(prevData); }
     finally { setReviewing(null); }
   }
 
   async function closeTask() {
-    if (!confirm('Close this task? No new submissions will be accepted.')) return;
-    const res = await fetch(`/api/tasks/${taskId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...(data?.task), status: 'CLOSED' }),
-    });
-    if ((await res.json()).success) { toast.success('Task closed'); fetchTask(); }
+    setClosing(true);
+    try {
+      const res = await fetch(`/api/tasks/${taskId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...(data?.task), status: 'CLOSED' }),
+      });
+      if ((await res.json()).success) { toast.success('Task closed'); setConfirmClose(false); fetchTask(); }
+    } finally { setClosing(false); }
   }
 
   async function deleteTask() {
-    if (!confirm('Delete this task permanently? All submissions for it will remain orphaned. This cannot be undone.')) return;
     setDeleting(true);
     try {
       const res = await fetch(`/api/tasks/${taskId}`, { method: 'DELETE' });
@@ -112,8 +129,17 @@ export default function TaskDetailPage({ params }: { params: Promise<{ taskId: s
   }
 
   if (loading) return (
-    <div className="flex justify-center py-16">
-      <Loader2 size={32} className="animate-spin text-orange-500" />
+    <div className="max-w-3xl mx-auto space-y-6">
+      <div className="flex items-start gap-3">
+        <Skeleton className="h-9 w-9 rounded-lg flex-shrink-0" />
+        <div className="flex-1 space-y-2">
+          <Skeleton className="h-5 w-24" />
+          <Skeleton className="h-6 w-2/3" />
+          <Skeleton className="h-3 w-1/2" />
+        </div>
+      </div>
+      <Card><CardContent className="p-6 space-y-2"><Skeleton className="h-3 w-full" /><Skeleton className="h-3 w-5/6" /><Skeleton className="h-3 w-2/3" /></CardContent></Card>
+      <Card><CardContent className="p-6 space-y-2"><Skeleton className="h-3 w-full" /><Skeleton className="h-3 w-3/4" /></CardContent></Card>
     </div>
   );
   if (!data) return null;
@@ -138,6 +164,7 @@ export default function TaskDetailPage({ params }: { params: Promise<{ taskId: s
                 <Badge className={getAssignmentTypeColor(task.assignmentType)}>{task.assignmentType}</Badge>
                 {task.domain && <Badge className={getDomainColor(task.domain)}>{task.domain}</Badge>}
                 {task.subdomain && <Badge className={getSubdomainColor(task.subdomain)}>{task.subdomain}</Badge>}
+                {task.priority && <Badge className={getPriorityColor(task.priority)}>{task.priority}</Badge>}
               </div>
               <h1 className="text-xl sm:text-2xl font-bold text-slate-100">{task.title}</h1>
               <div className="flex flex-wrap gap-3 sm:gap-4 mt-2 text-sm text-slate-400">
@@ -155,13 +182,13 @@ export default function TaskDetailPage({ params }: { params: Promise<{ taskId: s
             {(canClose && task.status === 'OPEN' || canDelete) && (
               <div className="flex gap-2 flex-shrink-0">
                 {canClose && task.status === 'OPEN' && (
-                  <Button variant="outline" size="sm" onClick={closeTask}>
+                  <Button variant="outline" size="sm" onClick={() => setConfirmClose(true)}>
                     <span className="hidden sm:inline">Close Task</span>
                     <span className="sm:hidden">Close</span>
                   </Button>
                 )}
                 {canDelete && (
-                  <Button variant="destructive" size="sm" onClick={deleteTask} disabled={deleting}>
+                  <Button variant="destructive" size="sm" onClick={() => setConfirmDelete(true)} disabled={deleting}>
                     {deleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
                     <span className="hidden sm:inline">Delete</span>
                   </Button>
@@ -225,6 +252,12 @@ export default function TaskDetailPage({ params }: { params: Promise<{ taskId: s
                     <Link2 size={12} />{link}<ExternalLink size={11} />
                   </a>
                 ))}
+              </div>
+            )}
+            {mySubmission.reviewFeedback && (
+              <div className="rounded-lg border border-slate-700 bg-slate-800/60 p-3 text-sm text-slate-300">
+                <p className="text-xs font-medium text-slate-400 mb-1">Reviewer feedback</p>
+                <p className="whitespace-pre-wrap">{mySubmission.reviewFeedback}</p>
               </div>
             )}
             <div className="text-xs text-slate-500 space-y-1">
@@ -359,26 +392,40 @@ export default function TaskDetailPage({ params }: { params: Promise<{ taskId: s
                   </div>
                 )}
                 {sub.reviewStatus === 'PENDING' && (
-                  <div className="flex gap-2 pt-2 border-t border-slate-700">
-                    <Button
-                      size="sm"
-                      className="flex-1"
-                      disabled={!!reviewing}
-                      onClick={() => handleReview(sub.submissionId, 'APPROVE')}
-                    >
-                      {reviewing === sub.submissionId + 'APPROVE' ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-                      Approve
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      className="flex-1"
-                      disabled={!!reviewing}
-                      onClick={() => handleReview(sub.submissionId, 'REJECT')}
-                    >
-                      {reviewing === sub.submissionId + 'REJECT' ? <Loader2 size={14} className="animate-spin" /> : <XCircle size={14} />}
-                      Reject
-                    </Button>
+                  <div className="space-y-2 pt-2 border-t border-slate-700">
+                    <Textarea
+                      value={feedbackDrafts[sub.submissionId] || ''}
+                      onChange={e => setFeedbackDrafts(f => ({ ...f, [sub.submissionId]: e.target.value }))}
+                      placeholder="Feedback for the submitter (optional)..."
+                      className="min-h-[60px] text-sm"
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        className="flex-1"
+                        disabled={!!reviewing}
+                        onClick={() => handleReview(sub.submissionId, 'APPROVE')}
+                      >
+                        {reviewing === sub.submissionId + 'APPROVE' ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                        Approve
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        className="flex-1"
+                        disabled={!!reviewing}
+                        onClick={() => handleReview(sub.submissionId, 'REJECT')}
+                      >
+                        {reviewing === sub.submissionId + 'REJECT' ? <Loader2 size={14} className="animate-spin" /> : <XCircle size={14} />}
+                        Reject
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                {sub.reviewStatus !== 'PENDING' && sub.reviewFeedback && (
+                  <div className="rounded-lg border border-slate-700 bg-slate-800/60 p-3 text-sm text-slate-300">
+                    <p className="text-xs font-medium text-slate-400 mb-1">Reviewer feedback</p>
+                    <p className="whitespace-pre-wrap">{sub.reviewFeedback}</p>
                   </div>
                 )}
                 {sub.reviewStatus !== 'PENDING' && sub.reviewedByName && (
@@ -391,6 +438,26 @@ export default function TaskDetailPage({ params }: { params: Promise<{ taskId: s
           </CardContent>
         </Card>
       )}
+
+      <ConfirmDialog
+        open={confirmClose}
+        onOpenChange={setConfirmClose}
+        title="Close this task?"
+        description="No new submissions will be accepted once it's closed."
+        confirmLabel="Close Task"
+        loading={closing}
+        onConfirm={closeTask}
+      />
+      <ConfirmDialog
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        title="Delete this task permanently?"
+        description="All submissions for it will remain orphaned. This cannot be undone."
+        confirmLabel="Delete"
+        destructive
+        loading={deleting}
+        onConfirm={deleteTask}
+      />
     </div>
   );
 }

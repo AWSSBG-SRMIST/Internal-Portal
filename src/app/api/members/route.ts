@@ -18,14 +18,23 @@ export async function GET(req: NextRequest) {
 
     const showAll = searchParams.get('all') === 'true' && isPresidium(user);
 
-    const result = await db.send(new ScanCommand({ TableName: TABLE.MEMBERS }));
+    // A domain filter can go straight to the DomainIndex GSI instead of
+    // scanning the whole table.
+    const result = domain
+      ? await db.send(new QueryCommand({
+          TableName: TABLE.MEMBERS,
+          IndexName: 'DomainIndex',
+          KeyConditionExpression: '#d = :domain',
+          ExpressionAttributeNames: { '#d': 'domain' },
+          ExpressionAttributeValues: { ':domain': domain },
+        }))
+      : await db.send(new ScanCommand({ TableName: TABLE.MEMBERS }));
     let members = result.Items || [];
 
     // Inactive members are hidden from everyone except the presidium
     // (who can pass ?all=true to see them for reactivation purposes).
     if (!showAll) members = members.filter((m: any) => m.isActive !== false);
 
-    if (domain) members = members.filter((m: any) => m.domain === domain);
     if (subdomain) members = members.filter((m: any) => m.subdomain === subdomain);
     if (role) members = members.filter((m: any) => m.role === role);
     if (search) members = members.filter((m: any) =>

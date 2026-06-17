@@ -11,10 +11,24 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    // Only the fields actually aggregated below — submissions in particular
+    // carry a full text `content` field per item that we don't need here.
     const [membersRes, tasksRes, submissionsRes] = await Promise.all([
-      db.send(new ScanCommand({ TableName: TABLE.MEMBERS })),
-      db.send(new ScanCommand({ TableName: TABLE.TASKS })),
-      db.send(new ScanCommand({ TableName: TABLE.SUBMISSIONS })),
+      db.send(new ScanCommand({
+        TableName: TABLE.MEMBERS,
+        ProjectionExpression: '#d, isActive, #r',
+        ExpressionAttributeNames: { '#d': 'domain', '#r': 'role' },
+      })),
+      db.send(new ScanCommand({
+        TableName: TABLE.TASKS,
+        ProjectionExpression: '#d, #s, createdAt',
+        ExpressionAttributeNames: { '#d': 'domain', '#s': 'status' },
+      })),
+      db.send(new ScanCommand({
+        TableName: TABLE.SUBMISSIONS,
+        ProjectionExpression: '#d, reviewStatus',
+        ExpressionAttributeNames: { '#d': 'domain' },
+      })),
     ]);
 
     const members = membersRes.Items || [];

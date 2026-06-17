@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { db, TABLE, ScanCommand, PutCommand, GetCommand } from '@/lib/dynamodb';
+import { db, TABLE, ScanCommand, QueryCommand, PutCommand, GetCommand } from '@/lib/dynamodb';
 import { logAction } from '@/lib/audit';
-import { canCreateTask, isTaskVisible, canAssignToMember, canAssignToScope, canAssignToCohort } from '@/lib/permissions';
+import { canCreateTask, isTaskVisible, canAssignToMember, canAssignToScope } from '@/lib/permissions';
+import { autoCloseIfExpired } from '@/lib/tasks';
+import { isDeadlinePassed } from '@/lib/utils';
 import { randomUUID } from 'crypto';
 
 export async function GET(req: NextRequest) {
@@ -14,17 +16,40 @@ export async function GET(req: NextRequest) {
     const status = searchParams.get('status');
     const myTasks = searchParams.get('my') === 'true';
 
-    const [tasksResult, cohortsResult] = await Promise.all([
-      db.send(new ScanCommand({ TableName: TABLE.TASKS })),
-      db.send(new ScanCommand({ TableName: TABLE.COHORTS })),
-    ]);
+    if (status !== null && !['OPEN', 'CLOSED'].includes(status)) {
+      return NextResponse.json({ error: 'Invalid status value' }, { status: 400 });
+    }
+
+    // A status filter can go straight to the StatusCreatedIndex GSI instead of
+    // scanning the whole table — cheaper and it comes back pre-sorted.
+    const tasksResult = status
+      ? await db.send(new QueryCommand({
+          TableName: TABLE.TASKS,
+          IndexName: 'StatusCreatedIndex',
+          KeyConditionExpression: '#s = :status',
+          ExpressionAttributeNames: { '#s': 'status' },
+          ExpressionAttributeValues: { ':status': status },
+          ScanIndexForward: false,
+        }))
+      : await db.send(new ScanCommand({ TableName: TABLE.TASKS }));
 
     let tasks = tasksResult.Items || [];
-    const cohorts = cohortsResult.Items || [];
-    const cohortMap = new Map(cohorts.map((c: any) => [c.cohortId, c]));
 
-    tasks = tasks.filter((task: any) => isTaskVisible(user, task, cohortMap));
+    // Lazily flip any OPEN task whose deadline has passed to CLOSED — no
+    // cron/Lambda needed, the status just self-corrects on the next read.
+    // Skipped entirely when status=CLOSED was requested (nothing OPEN in that set).
+    if (status !== 'CLOSED') {
+      await Promise.all(
+        tasks
+          .filter((t: any) => t.status === 'OPEN' && isDeadlinePassed(t.deadline))
+          .map(async (t: any) => { t.status = await autoCloseIfExpired(t); })
+      );
+    }
 
+    tasks = tasks.filter((task: any) => isTaskVisible(user, task));
+
+    // If autoClose flipped some tasks to CLOSED above and the caller asked for
+    // status=OPEN, those no longer belong in the result.
     if (status) tasks = tasks.filter((t: any) => t.status === status);
     if (myTasks) tasks = tasks.filter((t: any) => t.assignedToId === user.memberId || t.assignmentType === 'GENERAL');
 
@@ -45,10 +70,13 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { title, description, deadline, assignmentType, assignedToId, domain, subdomain } = body;
+    const { title, description, deadline, assignmentType, assignedToId, domain, subdomain, priority } = body;
 
     if (!title || !description || !deadline || !assignmentType) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+    if (priority !== undefined && !['LOW', 'MEDIUM', 'HIGH'].includes(priority)) {
+      return NextResponse.json({ error: 'Invalid priority value' }, { status: 400 });
     }
 
     // assignedToName is always derived server-side; never trusted from the client.
@@ -62,14 +90,6 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'You are not allowed to assign tasks to this member' }, { status: 403 });
       }
       resolvedAssignedToName = targetResult.Item.name;
-    } else if (assignmentType === 'COHORT') {
-      if (!assignedToId) return NextResponse.json({ error: 'Missing target cohort' }, { status: 400 });
-      const cohortResult = await db.send(new GetCommand({ TableName: TABLE.COHORTS, Key: { cohortId: assignedToId } }));
-      if (!cohortResult.Item) return NextResponse.json({ error: 'Target cohort not found' }, { status: 404 });
-      if (!canAssignToCohort(user, cohortResult.Item as any)) {
-        return NextResponse.json({ error: 'You are not allowed to assign tasks to this cohort' }, { status: 403 });
-      }
-      resolvedAssignedToName = cohortResult.Item.name;
     } else if (assignmentType === 'DOMAIN' || assignmentType === 'SUBDOMAIN') {
       if (!domain || (assignmentType === 'SUBDOMAIN' && !subdomain)) {
         return NextResponse.json({ error: 'Missing domain/subdomain' }, { status: 400 });
@@ -90,6 +110,7 @@ export async function POST(req: NextRequest) {
       title,
       description,
       deadline,
+      priority: priority || 'MEDIUM',
       assignmentType,
       assignedToId: assignedToId || undefined,
       assignedToName: resolvedAssignedToName,

@@ -108,21 +108,18 @@ export function getAssignmentTypeColor(type: string): string {
     INDIVIDUAL: 'bg-indigo-500/20 text-indigo-300',
     DOMAIN: 'bg-purple-500/20 text-purple-300',
     SUBDOMAIN: 'bg-teal-500/20 text-teal-300',
-    COHORT: 'bg-yellow-500/20 text-yellow-300',
     GENERAL: 'bg-slate-700 text-slate-300',
   };
   return colors[type] || 'bg-slate-700 text-slate-300';
 }
 
-// Cohort cards show type next to subdomain (getSubdomainColor's palette), so
-// these three stay outside that palette to avoid a same-card color clash.
-export function getCohortTypeColor(type: string): string {
+export function getPriorityColor(priority: string): string {
   const colors: Record<string, string> = {
-    SUBDOMAIN: 'bg-indigo-500/20 text-indigo-300',
-    CUSTOM: 'bg-purple-500/20 text-purple-300',
-    GENERAL: 'bg-slate-700 text-slate-300',
+    HIGH: 'bg-red-500/20 text-red-300',
+    MEDIUM: 'bg-yellow-500/20 text-yellow-300',
+    LOW: 'bg-slate-700 text-slate-300',
   };
-  return colors[type] || 'bg-slate-700 text-slate-300';
+  return colors[priority] || 'bg-slate-700 text-slate-300';
 }
 
 export function getStarColor(stars: number): string {

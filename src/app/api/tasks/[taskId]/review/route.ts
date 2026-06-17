@@ -13,10 +13,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tas
   const { taskId } = await params;
 
   try {
-    const { submissionId, action } = await req.json(); // action: 'APPROVE' | 'REJECT'
+    const { submissionId, action, feedback } = await req.json(); // action: 'APPROVE' | 'REJECT'
     if (!submissionId || !['APPROVE', 'REJECT'].includes(action)) {
       return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
     }
+    if (feedback !== undefined && typeof feedback !== 'string') {
+      return NextResponse.json({ error: 'feedback must be a string' }, { status: 400 });
+    }
+    const trimmedFeedback = (feedback || '').trim() || null;
 
     const [submissionResult, taskResult] = await Promise.all([
       db.send(new GetCommand({ TableName: TABLE.SUBMISSIONS, Key: { submissionId } })),
@@ -48,13 +52,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tas
     await db.send(new UpdateCommand({
       TableName: TABLE.SUBMISSIONS,
       Key: { submissionId },
-      UpdateExpression: 'SET reviewStatus = :s, reviewedBy = :rb, reviewedByName = :rbn, reviewedAt = :ra, ratingAwarded = :r',
+      UpdateExpression: 'SET reviewStatus = :s, reviewedBy = :rb, reviewedByName = :rbn, reviewedAt = :ra, ratingAwarded = :r, reviewFeedback = :fb',
       ExpressionAttributeValues: {
         ':s':   newStatus,
         ':rb':  user.memberId,
         ':rbn': user.name,
         ':ra':  new Date().toISOString(),
         ':r':   action === 'APPROVE' ? ratingDelta : null,
+        ':fb':  trimmedFeedback,
       },
     }));
 

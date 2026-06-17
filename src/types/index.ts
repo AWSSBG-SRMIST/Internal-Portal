@@ -53,13 +53,16 @@ export interface Member {
   teamId?: string;
 }
 
-export type TaskAssignmentType = 'INDIVIDUAL' | 'DOMAIN' | 'SUBDOMAIN' | 'COHORT' | 'GENERAL';
+export type TaskAssignmentType = 'INDIVIDUAL' | 'DOMAIN' | 'SUBDOMAIN' | 'GENERAL';
+
+export type TaskPriority = 'LOW' | 'MEDIUM' | 'HIGH';
 
 export interface Task {
   taskId: string;
   title: string;
   description: string;
   deadline: string;
+  priority: TaskPriority;
   assignmentType: TaskAssignmentType;
   assignedToId: string | null;
   assignedToName: string;
@@ -70,6 +73,7 @@ export interface Task {
   createdAt: string;
   status: 'OPEN' | 'CLOSED';
   totalSubmissions: number;
+  reminderSentAt?: string | null;
 }
 
 export type ReviewStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
@@ -87,6 +91,7 @@ export interface Submission {
   reviewedBy: string | null;
   reviewedByName: string | null;
   reviewedAt: string | null;
+  reviewFeedback: string | null;
   ratingAwarded: number | null;
   deadline: string;
 }
@@ -112,18 +117,6 @@ export interface ShortLink {
   createdByName: string;
   createdAt: string;
   clicks: number;
-}
-
-export interface Cohort {
-  cohortId: string;
-  name: string;
-  type: 'SUBDOMAIN' | 'CUSTOM' | 'GENERAL';
-  domain: Domain | null;
-  subdomain: Subdomain | null;
-  memberIds?: string[];  // only stored for CUSTOM cohorts
-  memberCount?: number;  // computed on GET for display
-  createdBy: string;
-  createdAt: string;
 }
 
 export interface AuditLog {

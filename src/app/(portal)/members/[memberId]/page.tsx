@@ -2,11 +2,12 @@
 import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { ArrowLeft, Mail, Phone, Code2, Link2, Camera, Award, ExternalLink, Loader2 } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, Code2, Link2, Camera, Award, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Skeleton } from '@/components/ui/skeleton';
 import { getRoleColor, getDomainColor, getSubdomainColor, formatRole } from '@/lib/utils';
 import Link from 'next/link';
 import type { Member } from '@/types';
@@ -33,7 +34,25 @@ export default function MemberProfilePage({ params }: { params: Promise<{ member
     finally { setLoading(false); }
   }
 
-  if (loading) return <div className="flex justify-center py-16"><Loader2 size={32} className="animate-spin text-orange-500" /></div>;
+  if (loading) return (
+    <div className="max-w-2xl mx-auto space-y-6">
+      <div className="flex items-center gap-4">
+        <Skeleton className="h-9 w-9 rounded-lg" />
+        <Skeleton className="h-5 w-32" />
+      </div>
+      <Card>
+        <CardContent className="p-6 flex items-start gap-4">
+          <Skeleton className="h-16 w-16 rounded-full flex-shrink-0" />
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-5 w-40" />
+            <div className="flex gap-2"><Skeleton className="h-5 w-20" /><Skeleton className="h-5 w-20" /></div>
+            <Skeleton className="h-3 w-1/2" />
+          </div>
+        </CardContent>
+      </Card>
+      <Card><CardContent className="p-6 space-y-3"><Skeleton className="h-3 w-full" /><Skeleton className="h-3 w-5/6" /><Skeleton className="h-3 w-2/3" /></CardContent></Card>
+    </div>
+  );
   if (!member) return null;
 
   const initials = member.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();

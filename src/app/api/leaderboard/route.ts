@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { db, TABLE, ScanCommand } from '@/lib/dynamodb';
+import { db, TABLE, ScanCommand, QueryCommand } from '@/lib/dynamodb';
 
 export async function GET(req: NextRequest) {
   const user = await getCurrentUser();
@@ -12,9 +12,26 @@ export async function GET(req: NextRequest) {
     const subdomain = searchParams.get('subdomain');
     const limit = parseInt(searchParams.get('limit') || '50');
 
+    // Only the fields the leaderboard actually renders — cuts payload/RCU on
+    // what would otherwise be a full-attribute scan of both tables.
+    const memberProjection = {
+      ProjectionExpression: 'memberId, #n, role, #d, subdomain, totalStars, isActive',
+      ExpressionAttributeNames: { '#n': 'name', '#d': 'domain' },
+    };
     const [membersResult, ratingsResult] = await Promise.all([
-      db.send(new ScanCommand({ TableName: TABLE.MEMBERS })),
-      db.send(new ScanCommand({ TableName: TABLE.RATINGS })),
+      domain
+        ? db.send(new QueryCommand({
+            TableName: TABLE.MEMBERS,
+            IndexName: 'DomainIndex',
+            KeyConditionExpression: '#d = :domain',
+            ExpressionAttributeValues: { ':domain': domain },
+            ...memberProjection,
+          }))
+        : db.send(new ScanCommand({ TableName: TABLE.MEMBERS, ...memberProjection })),
+      db.send(new ScanCommand({
+        TableName: TABLE.RATINGS,
+        ProjectionExpression: 'memberId, approvedCount, rejectedCount, pendingCount',
+      })),
     ]);
 
     const members = membersResult.Items || [];

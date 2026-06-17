@@ -1,0 +1,723 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "SBG Internal Portal API",
+    "description": "REST API for the AWS Student Builder Group internal operations portal — members, tasks, submissions, link shortener, audit logs, and analytics. All endpoints (except auth) require a valid `sbg_session` HttpOnly cookie obtained via the OTP login flow.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    { "url": "/api", "description": "Relative to deployment origin" }
+  ],
+  "tags": [
+    { "name": "Auth", "description": "OTP-based login, session, and logout" },
+    { "name": "Members", "description": "Member directory and profile management" },
+    { "name": "Tasks", "description": "Task creation, assignment, and lifecycle" },
+    { "name": "Submissions", "description": "Task submissions made by members" },
+    { "name": "Links", "description": "Internal link shortener" },
+    { "name": "Leaderboard", "description": "Star-rating leaderboard" },
+    { "name": "Analytics", "description": "Aggregate org-wide statistics" },
+    { "name": "Audit Logs", "description": "Presidium-only action audit trail" },
+    { "name": "Cron", "description": "Endpoints meant to be triggered by an external scheduler, not by end users" }
+  ],
+  "components": {
+    "securitySchemes": {
+      "sessionCookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "sbg_session"
+      },
+      "cronSecret": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-cron-secret",
+        "description": "Shared secret configured via the CRON_SECRET env var. An `Authorization: Bearer <secret>` header is also accepted."
+      }
+    },
+    "schemas": {
+      "Role": {
+        "type": "string",
+        "enum": ["SBG_LEADER", "SECRETARY", "DIRECTOR", "MANAGER", "ASSOCIATE", "BUILDER"]
+      },
+      "Domain": {
+        "type": "string",
+        "enum": ["Technical", "Corporate", "Creatives", "General"]
+      },
+      "Subdomain": {
+        "type": "string",
+        "enum": ["Software Development", "AI & Machine Learning", "Cloud & DevOps", "Events & Operations", "Sponsorship & Finance", "HR & Admin", "PR & Marketing", "Digital Design", "Media Production"]
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": { "type": "string" }
+        }
+      },
+      "SessionUser": {
+        "type": "object",
+        "properties": {
+          "memberId": { "type": "string" },
+          "name": { "type": "string" },
+          "email": { "type": "string", "format": "email" },
+          "role": { "$ref": "#/components/schemas/Role" },
+          "domain": { "$ref": "#/components/schemas/Domain", "nullable": true },
+          "subdomain": { "$ref": "#/components/schemas/Subdomain", "nullable": true }
+        }
+      },
+      "Member": {
+        "type": "object",
+        "properties": {
+          "memberId": { "type": "string" },
+          "clubId": { "type": "string" },
+          "name": { "type": "string" },
+          "regNo": { "type": "string" },
+          "department": { "type": "string" },
+          "section": { "type": "string" },
+          "role": { "$ref": "#/components/schemas/Role" },
+          "domain": { "$ref": "#/components/schemas/Domain", "nullable": true },
+          "subdomain": { "$ref": "#/components/schemas/Subdomain", "nullable": true },
+          "officialEmail": { "type": "string", "format": "email" },
+          "personalEmail": { "type": "string" },
+          "phone": { "type": "string" },
+          "whatsapp": { "type": "string" },
+          "github": { "type": "string" },
+          "linkedin": { "type": "string" },
+          "instagram": { "type": "string" },
+          "meetup": { "type": "string" },
+          "builderId": { "type": "string" },
+          "faName": { "type": "string" },
+          "faEmail": { "type": "string" },
+          "faPhone": { "type": "string" },
+          "joinedAt": { "type": "string", "format": "date-time" },
+          "isActive": { "type": "boolean" },
+          "totalStars": { "type": "number" }
+        }
+      },
+      "MemberCreateRequest": {
+        "type": "object",
+        "required": ["officialEmail"],
+        "properties": {
+          "officialEmail": { "type": "string", "format": "email" },
+          "clubId": { "type": "string" },
+          "name": { "type": "string" },
+          "regNo": { "type": "string" },
+          "department": { "type": "string" },
+          "section": { "type": "string" },
+          "role": { "$ref": "#/components/schemas/Role" },
+          "domain": { "$ref": "#/components/schemas/Domain" },
+          "subdomain": { "$ref": "#/components/schemas/Subdomain" },
+          "personalEmail": { "type": "string" },
+          "phone": { "type": "string" },
+          "whatsapp": { "type": "string" },
+          "github": { "type": "string" },
+          "linkedin": { "type": "string" },
+          "instagram": { "type": "string" },
+          "meetup": { "type": "string" },
+          "builderId": { "type": "string" },
+          "faName": { "type": "string" },
+          "faEmail": { "type": "string" },
+          "faPhone": { "type": "string" }
+        }
+      },
+      "MemberUpdateRequest": {
+        "type": "object",
+        "description": "Self-service callers may only set phone, github, linkedin, meetup, personalEmail. Presidium may additionally set name, role, domain, subdomain, department, builderId, isActive, clubId, regNo.",
+        "properties": {
+          "name": { "type": "string" },
+          "role": { "$ref": "#/components/schemas/Role" },
+          "domain": { "$ref": "#/components/schemas/Domain" },
+          "subdomain": { "$ref": "#/components/schemas/Subdomain" },
+          "department": { "type": "string" },
+          "phone": { "type": "string" },
+          "github": { "type": "string" },
+          "linkedin": { "type": "string" },
+          "meetup": { "type": "string" },
+          "builderId": { "type": "string" },
+          "personalEmail": { "type": "string" },
+          "isActive": { "type": "boolean" },
+          "clubId": { "type": "string" },
+          "regNo": { "type": "string" }
+        }
+      },
+      "Task": {
+        "type": "object",
+        "properties": {
+          "taskId": { "type": "string" },
+          "title": { "type": "string" },
+          "description": { "type": "string" },
+          "deadline": { "type": "string", "format": "date-time" },
+          "priority": { "$ref": "#/components/schemas/TaskPriority" },
+          "assignmentType": { "type": "string", "enum": ["INDIVIDUAL", "DOMAIN", "SUBDOMAIN", "GENERAL"] },
+          "assignedToId": { "type": "string", "nullable": true },
+          "assignedToName": { "type": "string" },
+          "domain": { "$ref": "#/components/schemas/Domain", "nullable": true },
+          "subdomain": { "$ref": "#/components/schemas/Subdomain", "nullable": true },
+          "createdBy": { "type": "string" },
+          "createdByName": { "type": "string" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "status": { "type": "string", "enum": ["OPEN", "CLOSED"], "description": "Lazily flipped OPEN->CLOSED on read once the deadline has passed — no scheduled job required." },
+          "totalSubmissions": { "type": "integer" },
+          "reminderSentAt": { "type": "string", "format": "date-time", "nullable": true, "description": "Set once a deadline-reminder email batch has been sent for this task; cleared if the deadline is changed." }
+        }
+      },
+      "TaskPriority": {
+        "type": "string",
+        "enum": ["LOW", "MEDIUM", "HIGH"]
+      },
+      "TaskCreateRequest": {
+        "type": "object",
+        "required": ["title", "description", "deadline", "assignmentType"],
+        "properties": {
+          "title": { "type": "string" },
+          "description": { "type": "string" },
+          "deadline": { "type": "string", "format": "date-time" },
+          "priority": { "$ref": "#/components/schemas/TaskPriority", "description": "Defaults to MEDIUM if omitted" },
+          "assignmentType": { "type": "string", "enum": ["INDIVIDUAL", "DOMAIN", "SUBDOMAIN", "GENERAL"] },
+          "assignedToId": { "type": "string", "description": "memberId, required when assignmentType=INDIVIDUAL" },
+          "domain": { "$ref": "#/components/schemas/Domain" },
+          "subdomain": { "$ref": "#/components/schemas/Subdomain" }
+        }
+      },
+      "TaskUpdateRequest": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string" },
+          "description": { "type": "string" },
+          "deadline": { "type": "string", "format": "date-time", "description": "Changing this clears reminderSentAt so a new reminder cycle can fire" },
+          "priority": { "$ref": "#/components/schemas/TaskPriority" },
+          "status": { "type": "string", "enum": ["OPEN", "CLOSED"] }
+        }
+      },
+      "TaskDetail": {
+        "type": "object",
+        "properties": {
+          "task": { "$ref": "#/components/schemas/Task" },
+          "submissions": { "type": "array", "items": { "$ref": "#/components/schemas/Submission" } },
+          "mySubmission": { "allOf": [{ "$ref": "#/components/schemas/Submission" }], "nullable": true },
+          "canReview": { "type": "boolean" },
+          "canSubmit": { "type": "boolean" },
+          "canDelete": { "type": "boolean" },
+          "canClose": { "type": "boolean" }
+        }
+      },
+      "Submission": {
+        "type": "object",
+        "properties": {
+          "submissionId": { "type": "string" },
+          "taskId": { "type": "string" },
+          "taskTitle": { "type": "string" },
+          "memberId": { "type": "string" },
+          "memberName": { "type": "string" },
+          "content": { "type": "string" },
+          "links": { "type": "array", "items": { "type": "string", "format": "uri" } },
+          "submittedAt": { "type": "string", "format": "date-time" },
+          "reviewStatus": { "type": "string", "enum": ["PENDING", "APPROVED", "REJECTED"] },
+          "reviewedBy": { "type": "string", "nullable": true },
+          "reviewedByName": { "type": "string", "nullable": true },
+          "reviewedAt": { "type": "string", "format": "date-time", "nullable": true },
+          "reviewFeedback": { "type": "string", "nullable": true, "description": "Optional comment left by the reviewer on APPROVE/REJECT" },
+          "ratingAwarded": { "type": "number", "nullable": true },
+          "deadline": { "type": "string", "format": "date-time" },
+          "domain": { "$ref": "#/components/schemas/Domain", "nullable": true },
+          "subdomain": { "$ref": "#/components/schemas/Subdomain", "nullable": true }
+        }
+      },
+      "SubmissionCreateRequest": {
+        "type": "object",
+        "required": ["content"],
+        "properties": {
+          "content": { "type": "string" },
+          "links": { "type": "array", "items": { "type": "string", "format": "uri" } }
+        }
+      },
+      "ReviewRequest": {
+        "type": "object",
+        "required": ["submissionId", "action"],
+        "properties": {
+          "submissionId": { "type": "string" },
+          "action": { "type": "string", "enum": ["APPROVE", "REJECT"] },
+          "feedback": { "type": "string", "description": "Optional comment shown to the submitter" }
+        }
+      },
+      "ShortLink": {
+        "type": "object",
+        "properties": {
+          "shortCode": { "type": "string" },
+          "originalUrl": { "type": "string", "format": "uri" },
+          "description": { "type": "string" },
+          "createdBy": { "type": "string" },
+          "createdByName": { "type": "string" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "clicks": { "type": "integer" }
+        }
+      },
+      "ShortLinkCreateRequest": {
+        "type": "object",
+        "required": ["originalUrl"],
+        "properties": {
+          "originalUrl": { "type": "string", "format": "uri" },
+          "description": { "type": "string" },
+          "customCode": { "type": "string", "pattern": "^[a-zA-Z0-9-_]{1,50}$" }
+        }
+      },
+      "Rating": {
+        "type": "object",
+        "properties": {
+          "memberId": { "type": "string" },
+          "memberName": { "type": "string" },
+          "domain": { "$ref": "#/components/schemas/Domain", "nullable": true },
+          "subdomain": { "$ref": "#/components/schemas/Subdomain", "nullable": true },
+          "role": { "$ref": "#/components/schemas/Role" },
+          "totalStars": { "type": "number" },
+          "approvedCount": { "type": "integer" },
+          "lateApprovedCount": { "type": "integer" },
+          "rejectedCount": { "type": "integer" },
+          "pendingCount": { "type": "integer" }
+        }
+      },
+      "LeaderboardEntry": {
+        "type": "object",
+        "properties": {
+          "memberId": { "type": "string" },
+          "name": { "type": "string" },
+          "role": { "$ref": "#/components/schemas/Role" },
+          "domain": { "$ref": "#/components/schemas/Domain", "nullable": true },
+          "subdomain": { "$ref": "#/components/schemas/Subdomain", "nullable": true },
+          "totalStars": { "type": "number" },
+          "approvedCount": { "type": "integer" },
+          "rejectedCount": { "type": "integer" },
+          "pendingCount": { "type": "integer" }
+        }
+      },
+      "AuditLog": {
+        "type": "object",
+        "properties": {
+          "logId": { "type": "string" },
+          "action": { "type": "string" },
+          "performedBy": { "type": "string" },
+          "performedByName": { "type": "string" },
+          "targetType": { "type": "string" },
+          "targetId": { "type": "string" },
+          "details": { "type": "string" },
+          "timestamp": { "type": "string", "format": "date-time" }
+        }
+      },
+      "AnalyticsResponse": {
+        "type": "object",
+        "properties": {
+          "overview": {
+            "type": "object",
+            "properties": {
+              "totalMembers": { "type": "integer" },
+              "totalTasks": { "type": "integer" },
+              "openTasks": { "type": "integer" },
+              "totalSubmissions": { "type": "integer" },
+              "approvalRate": { "type": "integer" }
+            }
+          },
+          "domainStats": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "domain": { "type": "string" },
+                "members": { "type": "integer" },
+                "tasks": { "type": "integer" },
+                "submissions": { "type": "integer" }
+              }
+            }
+          },
+          "submissionStats": {
+            "type": "object",
+            "properties": {
+              "total": { "type": "integer" },
+              "approved": { "type": "integer" },
+              "rejected": { "type": "integer" },
+              "pending": { "type": "integer" }
+            }
+          },
+          "roleStats": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "role": { "$ref": "#/components/schemas/Role" },
+                "count": { "type": "integer" }
+              }
+            }
+          },
+          "taskTrend": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "date": { "type": "string" },
+                "count": { "type": "integer" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "No valid session cookie present",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "error": "Unauthorized" } } }
+      },
+      "Forbidden": {
+        "description": "Authenticated but not permitted to perform this action",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "error": "Forbidden" } } }
+      },
+      "NotFound": {
+        "description": "Resource not found",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+      }
+    }
+  },
+  "security": [{ "sessionCookie": [] }],
+  "paths": {
+    "/auth/send-otp": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Send a login OTP to a member's official email",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "type": "object", "required": ["email"], "properties": { "email": { "type": "string", "format": "email" } } } } }
+        },
+        "responses": {
+          "200": { "description": "OTP sent", "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" }, "message": { "type": "string" } } } } } },
+          "400": { "description": "Missing email" },
+          "403": { "description": "Account is inactive" },
+          "404": { "description": "Email not registered" },
+          "429": { "description": "Resend cooldown in effect" }
+        }
+      }
+    },
+    "/auth/verify-otp": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Verify OTP and create a session",
+        "description": "On success, sets the `sbg_session` HttpOnly cookie.",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "type": "object", "required": ["email", "otp"], "properties": { "email": { "type": "string", "format": "email" }, "otp": { "type": "string" } } } } }
+        },
+        "responses": {
+          "200": { "description": "Session created", "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" }, "user": { "$ref": "#/components/schemas/SessionUser" } } } } } },
+          "400": { "description": "Missing email or OTP" },
+          "401": { "description": "Invalid or expired OTP" },
+          "403": { "description": "Account is inactive" },
+          "404": { "description": "Member not found" },
+          "429": { "description": "Too many failed attempts" }
+        }
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "tags": ["Auth"],
+        "summary": "Get the currently authenticated session user",
+        "responses": {
+          "200": { "description": "Current user", "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" }, "data": { "$ref": "#/components/schemas/SessionUser" } } } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/auth/logout": {
+      "get": {
+        "tags": ["Auth"],
+        "summary": "Destroy the session and redirect to /login",
+        "responses": { "302": { "description": "Redirect to /login with session cookie cleared" } }
+      },
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Destroy the session",
+        "responses": { "200": { "description": "Logged out", "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" } } } } } } }
+      }
+    },
+    "/members": {
+      "get": {
+        "tags": ["Members"],
+        "summary": "List members",
+        "description": "Inactive members are hidden unless the caller is presidium and passes `all=true`.",
+        "parameters": [
+          { "name": "domain", "in": "query", "schema": { "$ref": "#/components/schemas/Domain" } },
+          { "name": "subdomain", "in": "query", "schema": { "$ref": "#/components/schemas/Subdomain" } },
+          { "name": "role", "in": "query", "schema": { "$ref": "#/components/schemas/Role" } },
+          { "name": "search", "in": "query", "schema": { "type": "string" }, "description": "Matches name, officialEmail, or clubId (case-insensitive substring)" },
+          { "name": "all", "in": "query", "schema": { "type": "boolean" }, "description": "Presidium-only: include inactive members" }
+        ],
+        "responses": {
+          "200": { "description": "Member list", "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" }, "data": { "type": "array", "items": { "$ref": "#/components/schemas/Member" } } } } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      },
+      "post": {
+        "tags": ["Members"],
+        "summary": "Create a member",
+        "description": "Presidium only.",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/MemberCreateRequest" } } } },
+        "responses": {
+          "200": { "description": "Member created", "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" }, "data": { "$ref": "#/components/schemas/Member" } } } } } },
+          "400": { "description": "officialEmail is required" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "409": { "description": "A member with that email already exists" }
+        }
+      }
+    },
+    "/members/{memberId}": {
+      "get": {
+        "tags": ["Members"],
+        "summary": "Get a member by id (includes rating)",
+        "parameters": [{ "name": "memberId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": {
+          "200": { "description": "Member detail", "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" }, "data": { "allOf": [{ "$ref": "#/components/schemas/Member" }, { "type": "object", "properties": { "rating": { "$ref": "#/components/schemas/Rating", "nullable": true } } }] } } } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "put": {
+        "tags": ["Members"],
+        "summary": "Update a member",
+        "description": "Presidium may edit any field on any member. Non-presidium callers may only edit their own record, and only: phone, github, linkedin, meetup, personalEmail.",
+        "parameters": [{ "name": "memberId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/MemberUpdateRequest" } } } },
+        "responses": {
+          "200": { "description": "Updated", "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" } } } } } },
+          "400": { "description": "No valid fields to update" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      },
+      "delete": {
+        "tags": ["Members"],
+        "summary": "Deactivate a member (soft delete)",
+        "description": "Presidium only. Sets isActive=false; does not remove the record.",
+        "parameters": [{ "name": "memberId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": {
+          "200": { "description": "Deactivated", "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" } } } } } },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/tasks": {
+      "get": {
+        "tags": ["Tasks"],
+        "summary": "List tasks visible to the caller",
+        "parameters": [
+          { "name": "status", "in": "query", "schema": { "type": "string", "enum": ["OPEN", "CLOSED"] } },
+          { "name": "my", "in": "query", "schema": { "type": "boolean" }, "description": "Only tasks assigned to the caller or assignmentType=GENERAL" }
+        ],
+        "responses": {
+          "200": { "description": "Task list", "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" }, "data": { "type": "array", "items": { "$ref": "#/components/schemas/Task" } } } } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      },
+      "post": {
+        "tags": ["Tasks"],
+        "summary": "Create a task",
+        "description": "Requires task-creation privileges (presidium, director, manager, or associate, scope-dependent). The assignment target (member/domain/subdomain) is permission-checked server-side; assignedToName is always derived server-side.",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TaskCreateRequest" } } } },
+        "responses": {
+          "200": { "description": "Task created", "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" }, "data": { "$ref": "#/components/schemas/Task" } } } } } },
+          "400": { "description": "Missing required fields" },
+          "403": { "description": "Unauthorized to create tasks, or not allowed to assign to this target" },
+          "404": { "description": "Target member not found" }
+        }
+      }
+    },
+    "/tasks/{taskId}": {
+      "get": {
+        "tags": ["Tasks"],
+        "summary": "Get task detail with submissions and caller permissions",
+        "parameters": [{ "name": "taskId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": {
+          "200": { "description": "Task detail", "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" }, "data": { "$ref": "#/components/schemas/TaskDetail" } } } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "description": "Task not found or not visible to caller" }
+        }
+      },
+      "put": {
+        "tags": ["Tasks"],
+        "summary": "Update a task (title, description, deadline, status)",
+        "description": "Only the task creator or presidium may edit. Reopening a CLOSED task requires reviewer privileges (presidium/director/manager).",
+        "parameters": [{ "name": "taskId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TaskUpdateRequest" } } } },
+        "responses": {
+          "200": { "description": "Updated", "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" } } } } } },
+          "400": { "description": "Invalid status value, or no valid fields to update" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "delete": {
+        "tags": ["Tasks"],
+        "summary": "Delete a task and cascade-delete its submissions",
+        "description": "Only the task creator or presidium may delete.",
+        "parameters": [{ "name": "taskId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": {
+          "200": { "description": "Deleted", "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" } } } } } },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/tasks/{taskId}/submit": {
+      "post": {
+        "tags": ["Submissions"],
+        "summary": "Submit work for a task",
+        "description": "Caller must be eligible for the task's assignment scope, and the task must be OPEN (a task past its deadline is auto-closed on this read). A prior REJECTED submission does not block a new attempt — only an existing PENDING or APPROVED submission does.",
+        "parameters": [{ "name": "taskId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SubmissionCreateRequest" } } } },
+        "responses": {
+          "200": { "description": "Submission created", "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" }, "data": { "$ref": "#/components/schemas/Submission" } } } } } },
+          "400": { "description": "Task is closed, or content is required" },
+          "403": { "description": "Not eligible to submit to this task" },
+          "404": { "description": "Task not found" },
+          "409": { "description": "Already submitted for this task" }
+        }
+      }
+    },
+    "/tasks/{taskId}/review": {
+      "post": {
+        "tags": ["Submissions"],
+        "summary": "Approve or reject a pending submission",
+        "description": "Caller must have review rights over the submission's domain/subdomain scope (or be presidium). Approving awards a star rating based on submission timeliness vs. the task deadline.",
+        "parameters": [{ "name": "taskId", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ReviewRequest" } } } },
+        "responses": {
+          "200": { "description": "Reviewed", "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" }, "ratingAwarded": { "type": "number" } } } } } },
+          "400": { "description": "Invalid request, or taskId/submission mismatch" },
+          "403": { "description": "Not authorized to review this submission" },
+          "404": { "description": "Submission or task not found" },
+          "409": { "description": "Submission already reviewed" }
+        }
+      }
+    },
+    "/submissions": {
+      "get": {
+        "tags": ["Submissions"],
+        "summary": "List submissions",
+        "description": "Without `memberId`: presidium see all, directors see their domain, managers see their domain+subdomain, others get 403. With `memberId`: callers may always fetch their own; viewing another member's submissions requires the same scoped reviewer rights.",
+        "parameters": [
+          { "name": "memberId", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Submission list", "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" }, "data": { "type": "array", "items": { "$ref": "#/components/schemas/Submission" } } } } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "description": "Target member not found" }
+        }
+      }
+    },
+    "/links": {
+      "get": {
+        "tags": ["Links"],
+        "summary": "List all short links",
+        "description": "Requires link-shortener access.",
+        "responses": {
+          "200": { "description": "Link list", "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" }, "data": { "type": "array", "items": { "$ref": "#/components/schemas/ShortLink" } } } } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      },
+      "post": {
+        "tags": ["Links"],
+        "summary": "Create a short link",
+        "description": "Only http/https URLs are allowed. Custom codes must match `^[a-zA-Z0-9-_]{1,50}$`; otherwise a 7-char nanoid is generated.",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ShortLinkCreateRequest" } } } },
+        "responses": {
+          "200": { "description": "Link created", "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" }, "data": { "$ref": "#/components/schemas/ShortLink" } } } } } },
+          "400": { "description": "URL is required, invalid URL, disallowed protocol, or invalid custom code" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "409": { "description": "Short code already exists" }
+        }
+      }
+    },
+    "/links/{code}": {
+      "get": {
+        "tags": ["Links"],
+        "summary": "Get a short link by its code",
+        "parameters": [{ "name": "code", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": {
+          "200": { "description": "Link detail", "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" }, "data": { "$ref": "#/components/schemas/ShortLink" } } } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "delete": {
+        "tags": ["Links"],
+        "summary": "Delete a short link",
+        "description": "Caller must have link-shortener access and be the link's creator, or be presidium.",
+        "parameters": [{ "name": "code", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": {
+          "200": { "description": "Deleted", "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" } } } } } },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/leaderboard": {
+      "get": {
+        "tags": ["Leaderboard"],
+        "summary": "Get the star-rating leaderboard",
+        "description": "Presidium roles (SBG_LEADER, SECRETARY) are excluded — they don't participate in the rating system.",
+        "parameters": [
+          { "name": "domain", "in": "query", "schema": { "$ref": "#/components/schemas/Domain" } },
+          { "name": "subdomain", "in": "query", "schema": { "$ref": "#/components/schemas/Subdomain" } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 50 } }
+        ],
+        "responses": {
+          "200": { "description": "Leaderboard", "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" }, "data": { "type": "array", "items": { "$ref": "#/components/schemas/LeaderboardEntry" } } } } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/analytics": {
+      "get": {
+        "tags": ["Analytics"],
+        "summary": "Get org-wide analytics overview",
+        "description": "Presidium or DIRECTOR only.",
+        "responses": {
+          "200": { "description": "Analytics", "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" }, "data": { "$ref": "#/components/schemas/AnalyticsResponse" } } } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/audit-logs": {
+      "get": {
+        "tags": ["Audit Logs"],
+        "summary": "List audit log entries",
+        "description": "Presidium only.",
+        "parameters": [
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 100 } },
+          { "name": "action", "in": "query", "schema": { "type": "string" } },
+          { "name": "performedBy", "in": "query", "schema": { "type": "string" }, "description": "memberId of the actor" }
+        ],
+        "responses": {
+          "200": { "description": "Audit log list", "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" }, "data": { "type": "array", "items": { "$ref": "#/components/schemas/AuditLog" } } } } } } },
+          "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/cron/task-reminders": {
+      "get": {
+        "tags": ["Cron"],
+        "summary": "Email members who haven't submitted a task nearing its deadline",
+        "description": "Not user-facing — meant to be invoked by an external scheduler (e.g. the included GitHub Actions workflow, EventBridge Scheduler, cron-job.org) on a recurring basis. For each OPEN task whose deadline falls within `hoursBefore` hours and that hasn't already had a reminder sent, emails every eligible member who has not yet submitted, then marks the task's `reminderSentAt`.",
+        "security": [{ "cronSecret": [] }],
+        "parameters": [
+          { "name": "hoursBefore", "in": "query", "schema": { "type": "integer", "default": 24 }, "description": "Only consider tasks whose deadline is within this many hours from now" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reminder batch processed",
+            "content": { "application/json": { "schema": { "type": "object", "properties": { "success": { "type": "boolean" }, "tasksProcessed": { "type": "integer" }, "emailsSent": { "type": "integer" } } } } }
+          },
+          "401": { "description": "Missing or invalid cron secret" }
+        }
+      }
+    }
+  }
+}

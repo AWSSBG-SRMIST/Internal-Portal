@@ -21,7 +21,6 @@ export const TABLE = {
   SUBMISSIONS: 'sbg-submissions',
   RATINGS: 'sbg-ratings',
   LINKS: 'sbg-links',
-  COHORTS: 'sbg-cohorts',
   AUDIT_LOGS: 'sbg-audit-logs',
 } as const;
 

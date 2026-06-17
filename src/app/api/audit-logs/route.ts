@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { db, TABLE, ScanCommand } from '@/lib/dynamodb';
+import { db, TABLE, ScanCommand, QueryCommand } from '@/lib/dynamodb';
 import { isPresidium } from '@/lib/permissions';
 
 export async function GET(req: NextRequest) {
@@ -15,23 +15,33 @@ export async function GET(req: NextRequest) {
     const action = searchParams.get('action');
     const performedBy = searchParams.get('performedBy');
 
-    // Paginate through the full table — a single ScanCommand returns at most
-    // 1MB, so large audit log tables would be silently truncated without this.
+    // A performedBy filter can go straight to the TimestampIndex GSI (and
+    // come back pre-sorted) instead of scanning the whole table.
     let logs: any[] = [];
     let lastKey: Record<string, any> | undefined;
     do {
-      const result = await db.send(new ScanCommand({
-        TableName: TABLE.AUDIT_LOGS,
-        ...(lastKey ? { ExclusiveStartKey: lastKey } : {}),
-      }));
+      const result = await db.send(performedBy
+        ? new QueryCommand({
+            TableName: TABLE.AUDIT_LOGS,
+            IndexName: 'TimestampIndex',
+            KeyConditionExpression: 'performedBy = :pb',
+            ExpressionAttributeValues: { ':pb': performedBy },
+            ScanIndexForward: false,
+            ...(lastKey ? { ExclusiveStartKey: lastKey } : {}),
+          })
+        : new ScanCommand({
+            TableName: TABLE.AUDIT_LOGS,
+            ...(lastKey ? { ExclusiveStartKey: lastKey } : {}),
+          }));
       logs.push(...(result.Items || []));
       lastKey = result.LastEvaluatedKey as Record<string, any> | undefined;
     } while (lastKey);
 
     if (action) logs = logs.filter((l: any) => l.action === action);
-    if (performedBy) logs = logs.filter((l: any) => l.performedBy === performedBy);
 
-    logs.sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    // TimestampIndex already returns performedBy's logs newest-first; a plain
+    // Scan still needs an explicit sort.
+    if (!performedBy) logs.sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
     return NextResponse.json({ success: true, data: logs.slice(0, limit) });
   } catch (error) {

@@ -19,15 +19,21 @@ function isMyTask(user: SessionUser, task: { assignmentType: string; assignedToI
 
 async function getDashboardStats(user: SessionUser) {
   try {
-    const [tasksRes, cohortsRes, submissionsRes, linksRes] = await Promise.all([
+    const [tasksRes, submissionsRes, linksRes, mySubmissions] = await Promise.all([
       db.send(new ScanCommand({ TableName: TABLE.TASKS })),
-      db.send(new ScanCommand({ TableName: TABLE.COHORTS })),
       db.send(new ScanCommand({ TableName: TABLE.SUBMISSIONS })),
       db.send(new ScanCommand({ TableName: TABLE.LINKS, Select: 'COUNT' })),
+      db.send(new QueryCommand({
+        TableName: TABLE.SUBMISSIONS,
+        IndexName: 'MemberIndex',
+        KeyConditionExpression: 'memberId = :mid',
+        ExpressionAttributeValues: { ':mid': user.memberId },
+        Limit: 5,
+        ScanIndexForward: false,
+      })),
     ]);
 
-    const cohortMap = new Map((cohortsRes.Items || []).map((c: any) => [c.cohortId, c]));
-    const visibleTasks = (tasksRes.Items || []).filter((t: any) => isTaskVisible(user, t, cohortMap));
+    const visibleTasks = (tasksRes.Items || []).filter((t: any) => isTaskVisible(user, t));
     const visibleTaskIds = new Set(visibleTasks.map((t: any) => t.taskId));
 
     const openTasksAll = visibleTasks
@@ -39,15 +45,6 @@ async function getDashboardStats(user: SessionUser) {
     const teamTasks = isBuilder ? [] : openTasksAll.filter((t: any) => !isMyTask(user, t)).slice(0, 5);
 
     const visibleSubmissionsCount = (submissionsRes.Items || []).filter((s: any) => visibleTaskIds.has(s.taskId)).length;
-
-    const mySubmissions = await db.send(new QueryCommand({
-      TableName: TABLE.SUBMISSIONS,
-      IndexName: 'MemberIndex',
-      KeyConditionExpression: 'memberId = :mid',
-      ExpressionAttributeValues: { ':mid': user.memberId },
-      Limit: 5,
-      ScanIndexForward: false,
-    }));
 
     return {
       totalTasks: visibleTasks.length,
@@ -93,7 +90,7 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {statCards.map(card => (
           <Link href={card.href} key={card.label}>
-            <div className="stats-card hover:border-slate-700 transition-all cursor-pointer group">
+            <div className="stats-card cursor-pointer group">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs text-slate-400 font-medium">{card.label}</p>

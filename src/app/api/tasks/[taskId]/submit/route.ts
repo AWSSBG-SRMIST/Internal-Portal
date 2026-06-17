@@ -4,6 +4,7 @@ import { db, TABLE, GetCommand, PutCommand, UpdateCommand, QueryCommand } from '
 import { logAction } from '@/lib/audit';
 import { canSubmitTask } from '@/lib/permissions';
 import { incrementPendingCount } from '@/lib/ratings';
+import { autoCloseIfExpired } from '@/lib/tasks';
 import { randomUUID } from 'crypto';
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ taskId: string }> }) {
@@ -15,28 +16,27 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tas
   try {
     const task = await db.send(new GetCommand({ TableName: TABLE.TASKS, Key: { taskId } }));
     if (!task.Item) return NextResponse.json({ error: 'Task not found' }, { status: 404 });
+
+    task.Item.status = await autoCloseIfExpired(task.Item as any);
     if (task.Item.status === 'CLOSED') return NextResponse.json({ error: 'Task is closed' }, { status: 400 });
 
-    let cohortMap = new Map<string, any>();
-    if (task.Item.assignmentType === 'COHORT' && task.Item.assignedToId) {
-      const cohortResult = await db.send(new GetCommand({ TableName: TABLE.COHORTS, Key: { cohortId: task.Item.assignedToId } }));
-      if (cohortResult.Item) cohortMap.set(task.Item.assignedToId, cohortResult.Item);
-    }
-    if (!canSubmitTask(user, task.Item as any, cohortMap)) {
+    if (!canSubmitTask(user, task.Item as any)) {
       return NextResponse.json({ error: 'You are not eligible to submit to this task' }, { status: 403 });
     }
 
     // Paginate through all of the member's submissions to reliably detect duplicates
     // (DynamoDB FilterExpression applies after the 1MB page limit, so a single
     // query without pagination can miss submissions on subsequent pages).
+    // A REJECTED submission doesn't block a new attempt — only an active
+    // (PENDING or already-APPROVED) one does.
     let lastKey: Record<string, any> | undefined;
     do {
       const existing = await db.send(new QueryCommand({
         TableName: TABLE.SUBMISSIONS,
         IndexName: 'MemberIndex',
         KeyConditionExpression: 'memberId = :mid',
-        FilterExpression: 'taskId = :tid',
-        ExpressionAttributeValues: { ':mid': user.memberId, ':tid': taskId },
+        FilterExpression: 'taskId = :tid AND (reviewStatus = :pending OR reviewStatus = :approved)',
+        ExpressionAttributeValues: { ':mid': user.memberId, ':tid': taskId, ':pending': 'PENDING', ':approved': 'APPROVED' },
         ...(lastKey ? { ExclusiveStartKey: lastKey } : {}),
       }));
       if (existing.Items && existing.Items.length > 0) {
@@ -69,6 +69,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tas
       reviewedBy: null,
       reviewedByName: null,
       reviewedAt: null,
+      reviewFeedback: null,
       ratingAwarded: null,
       deadline: task.Item.deadline,
       domain: task.Item.domain,

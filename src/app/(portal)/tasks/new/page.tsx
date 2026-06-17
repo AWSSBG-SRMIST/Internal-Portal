@@ -11,19 +11,25 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { DOMAIN_SUBDOMAINS } from '@/types';
-import { canAssignToMember, canAssignToScope, canAssignToCohort } from '@/lib/permissions';
+import { canAssignToMember, canAssignToScope } from '@/lib/permissions';
 import Link from 'next/link';
-import type { Member, Cohort, Domain, SessionUser } from '@/types';
+import type { Member, Domain, SessionUser } from '@/types';
 
 const ALL_DOMAINS: Domain[] = ['Technical', 'Corporate', 'Creatives'];
 
-function allowedAssignmentTypes(me: SessionUser, assignableCohortCount: number): string[] {
+// MANAGER and ASSOCIATE only ever have one domain+subdomain, so for them
+// "Subdomain-wide" isn't a choice — it's just "everyone in my subdomain".
+// Resolve it automatically instead of asking them to pick from a list of one.
+function hasFixedSubdomainScope(me: SessionUser): boolean {
+  return me.role === 'MANAGER' || me.role === 'ASSOCIATE';
+}
+
+function allowedAssignmentTypes(me: SessionUser): string[] {
   return [
     canAssignToScope(me, 'GENERAL') && 'GENERAL',
     (me.role === 'SBG_LEADER' || me.role === 'SECRETARY' || me.role === 'DIRECTOR') && 'DOMAIN',
-    (me.role === 'SBG_LEADER' || me.role === 'SECRETARY' || me.role === 'DIRECTOR' || me.role === 'MANAGER') && 'SUBDOMAIN',
+    (me.role === 'SBG_LEADER' || me.role === 'SECRETARY' || me.role === 'DIRECTOR' || hasFixedSubdomainScope(me)) && 'SUBDOMAIN',
     me.role !== 'BUILDER' && 'INDIVIDUAL',
-    assignableCohortCount > 0 && 'COHORT',
   ].filter((v): v is string => Boolean(v));
 }
 
@@ -32,11 +38,11 @@ export default function NewTaskPage() {
   const [loading, setLoading] = useState(false);
   const [me, setMe] = useState<SessionUser | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
-  const [cohorts, setCohorts] = useState<Cohort[]>([]);
   const [form, setForm] = useState({
     title: '',
     description: '',
     deadline: '',
+    priority: 'MEDIUM',
     assignmentType: '',
     assignedToId: '',
     assignedToName: 'Everyone',
@@ -47,22 +53,20 @@ export default function NewTaskPage() {
   useEffect(() => {
     fetch('/api/auth/me').then(r => r.json()).then(d => { if (d.success) setMe(d.data); });
     fetch('/api/members').then(r => r.json()).then(d => { if (d.success) setMembers(d.data); });
-    fetch('/api/cohorts').then(r => r.json()).then(d => { if (d.success) setCohorts(d.data); });
   }, []);
 
   const assignableMembers = me ? members.filter(m => canAssignToMember(me, m)) : [];
-  const assignableCohorts = me ? cohorts.filter(c => canAssignToCohort(me, c)) : [];
-  const availableTypes = me ? allowedAssignmentTypes(me, assignableCohorts.length) : [];
+  const availableTypes = me ? allowedAssignmentTypes(me) : [];
 
   // Once we know who's logged in, default to the first assignment type they're
   // actually allowed to use, instead of always defaulting to GENERAL.
   useEffect(() => {
     if (!me || form.assignmentType) return;
-    if (availableTypes.length > 0) setForm(f => ({ ...f, assignmentType: availableTypes[0] }));
+    if (availableTypes.length > 0) handleAssignmentTypeChange(availableTypes[0]);
   }, [me, availableTypes, form.assignmentType]);
 
   const allowedDomains = me && (form.assignmentType === 'DOMAIN' || form.assignmentType === 'SUBDOMAIN')
-    ? ALL_DOMAINS.filter(d => canAssignToScope(me, form.assignmentType as 'DOMAIN' | 'SUBDOMAIN', d))
+    ? ALL_DOMAINS.filter(d => canAssignToScope(me, form.assignmentType as 'DOMAIN' | 'SUBDOMAIN', d, me.subdomain))
     : [];
 
   const subdomains = me && form.assignmentType === 'SUBDOMAIN' && form.domain
@@ -75,15 +79,24 @@ export default function NewTaskPage() {
     setForm(f => ({ ...f, domain, subdomain: '', assignedToName: getAssignedToName({ ...f, domain, subdomain: '' }) }));
   }
 
+  function handleAssignmentTypeChange(v: string) {
+    if (!me) return;
+    if (v === 'SUBDOMAIN' && hasFixedSubdomainScope(me)) {
+      setForm(f => ({
+        ...f, assignmentType: v, assignedToId: '', domain: me.domain || '', subdomain: me.subdomain || '',
+        assignedToName: getAssignedToName({ ...f, assignmentType: v, domain: me.domain || '', subdomain: me.subdomain || '' }),
+      }));
+      return;
+    }
+    setForm(f => ({ ...f, assignmentType: v, assignedToId: '', domain: '', subdomain: '', assignedToName: getAssignedToName({ ...f, assignmentType: v }) }));
+  }
+
   function getAssignedToName(f: typeof form): string {
     if (f.assignmentType === 'GENERAL') return 'Everyone';
     if (f.assignmentType === 'DOMAIN') return f.domain || 'All';
     if (f.assignmentType === 'SUBDOMAIN') return f.subdomain || f.domain || 'All';
     if (f.assignmentType === 'INDIVIDUAL' && f.assignedToId) {
       return assignableMembers.find(m => m.memberId === f.assignedToId)?.name || 'Unknown';
-    }
-    if (f.assignmentType === 'COHORT' && f.assignedToId) {
-      return assignableCohorts.find(c => c.cohortId === f.assignedToId)?.name || 'Unknown Cohort';
     }
     return 'Everyone';
   }
@@ -97,20 +110,11 @@ export default function NewTaskPage() {
 
     setLoading(true);
     try {
-      // For COHORT tasks, carry the cohort's domain/subdomain onto the task
-      let domain = form.domain || null;
-      let subdomain = form.subdomain || null;
-      if (form.assignmentType === 'COHORT' && form.assignedToId) {
-        const cohort = assignableCohorts.find(c => c.cohortId === form.assignedToId);
-        domain = cohort?.domain || null;
-        subdomain = cohort?.subdomain || null;
-      }
-
       const payload = {
         ...form,
         assignedToName: getAssignedToName(form),
-        domain,
-        subdomain,
+        domain: form.domain || null,
+        subdomain: form.subdomain || null,
         assignedToId: form.assignedToId || null,
       };
 
@@ -159,7 +163,7 @@ export default function NewTaskPage() {
         </Link>
         <div>
           <h1 className="text-2xl font-bold text-slate-100">Create Task</h1>
-          <p className="text-sm text-slate-400">Assign work to individuals, teams, or cohorts</p>
+          <p className="text-sm text-slate-400">Assign work to individuals or teams</p>
         </div>
       </div>
 
@@ -199,6 +203,17 @@ export default function NewTaskPage() {
                 required
               />
             </div>
+            <div className="space-y-2">
+              <Label>Priority</Label>
+              <Select value={form.priority} onValueChange={v => setForm(f => ({ ...f, priority: v }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="LOW">Low</SelectItem>
+                  <SelectItem value="MEDIUM">Medium</SelectItem>
+                  <SelectItem value="HIGH">High</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </CardContent>
         </Card>
 
@@ -209,19 +224,26 @@ export default function NewTaskPage() {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label>Assignment Type *</Label>
-              <Select value={form.assignmentType} onValueChange={v => setForm(f => ({ ...f, assignmentType: v, assignedToId: '', domain: '', subdomain: '', assignedToName: getAssignedToName({ ...f, assignmentType: v }) }))}>
+              <Select value={form.assignmentType} onValueChange={handleAssignmentTypeChange}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {availableTypes.includes('GENERAL') && <SelectItem value="GENERAL">General (Everyone)</SelectItem>}
                   {availableTypes.includes('DOMAIN') && <SelectItem value="DOMAIN">Domain-wide</SelectItem>}
-                  {availableTypes.includes('SUBDOMAIN') && <SelectItem value="SUBDOMAIN">Subdomain-wide</SelectItem>}
+                  {availableTypes.includes('SUBDOMAIN') && (
+                    <SelectItem value="SUBDOMAIN">{hasFixedSubdomainScope(me) ? 'My Subdomain (Everyone)' : 'Subdomain-wide'}</SelectItem>
+                  )}
                   {availableTypes.includes('INDIVIDUAL') && <SelectItem value="INDIVIDUAL">Individual Member</SelectItem>}
-                  {availableTypes.includes('COHORT') && <SelectItem value="COHORT">Cohort</SelectItem>}
                 </SelectContent>
               </Select>
             </div>
 
-            {(form.assignmentType === 'DOMAIN' || form.assignmentType === 'SUBDOMAIN') && (
+            {form.assignmentType === 'SUBDOMAIN' && hasFixedSubdomainScope(me) && (
+              <p className="text-sm text-slate-400">
+                This will go to everyone in your subdomain: <span className="font-medium text-slate-200">{me.subdomain}</span>
+              </p>
+            )}
+
+            {(form.assignmentType === 'DOMAIN' || (form.assignmentType === 'SUBDOMAIN' && !hasFixedSubdomainScope(me))) && (
               <div className="space-y-2">
                 <Label>Domain *</Label>
                 <Select value={form.domain} onValueChange={handleDomainChange}>
@@ -233,7 +255,7 @@ export default function NewTaskPage() {
               </div>
             )}
 
-            {form.assignmentType === 'SUBDOMAIN' && form.domain && subdomains.length > 0 && (
+            {form.assignmentType === 'SUBDOMAIN' && !hasFixedSubdomainScope(me) && form.domain && subdomains.length > 0 && (
               <div className="space-y-2">
                 <Label>Subdomain *</Label>
                 <Select value={form.subdomain} onValueChange={v => setForm(f => ({ ...f, subdomain: v }))}>
@@ -264,22 +286,6 @@ export default function NewTaskPage() {
               </div>
             )}
 
-            {form.assignmentType === 'COHORT' && (
-              <div className="space-y-2">
-                <Label>Cohort *</Label>
-                <Select value={form.assignedToId} onValueChange={v => setForm(f => ({ ...f, assignedToId: v }))}>
-                  <SelectTrigger><SelectValue placeholder="Select cohort" /></SelectTrigger>
-                  <SelectContent>
-                    {assignableCohorts.map(c => (
-                      <SelectItem key={c.cohortId} value={c.cohortId}>
-                        {c.name} <span className="text-slate-400 text-xs">({c.type} · {c.memberCount ?? 0} members)</span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
             {/* Preview */}
             <div className="bg-orange-500/10 border border-orange-500/30 rounded-lg p-3 flex items-start gap-2">
               <Info size={16} className="text-orange-400 mt-0.5 flex-shrink-0" />
@@ -290,7 +296,6 @@ export default function NewTaskPage() {
                   {form.assignmentType === 'GENERAL' ? 'Everyone' :
                    form.assignmentType === 'DOMAIN' ? `${form.domain || '?'} domain` :
                    form.assignmentType === 'SUBDOMAIN' ? `${form.subdomain || form.domain || '?'}` :
-                   form.assignmentType === 'COHORT' ? (form.assignedToId ? assignableCohorts.find(c => c.cohortId === form.assignedToId)?.name || '?' : '?') :
                    form.assignedToId ? assignableMembers.find(m => m.memberId === form.assignedToId)?.name || '?' : '?'}
                 </Badge>
               </div>
