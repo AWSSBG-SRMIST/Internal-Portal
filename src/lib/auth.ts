@@ -87,13 +87,16 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
   return getSession(token);
 }
 
-export function setSessionCookie(token: string): { name: string; value: string; httpOnly: boolean; secure: boolean; sameSite: 'strict'; maxAge: number; path: string } {
+export function setSessionCookie(token: string): { name: string; value: string; httpOnly: boolean; secure: boolean; sameSite: 'lax'; maxAge: number; path: string } {
   return {
     name: SESSION_COOKIE,
     value: token,
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
+    // 'strict' drops the cookie across some same-site redirect/navigation paths
+    // (seen on Vercel) — 'lax' still blocks cross-site POST/PUT/DELETE (CSRF)
+    // while allowing normal top-level GET navigation within the same site.
+    sameSite: 'lax',
     maxAge: SESSION_TTL,
     path: '/',
   };
