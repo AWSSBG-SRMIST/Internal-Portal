@@ -19,8 +19,8 @@ export interface LeaderboardEntry {
 // the route's eligibility/sorting logic changes.
 export async function getFullLeaderboard(): Promise<LeaderboardEntry[]> {
   const memberProjection = {
-    ProjectionExpression: 'memberId, #n, role, #d, subdomain, totalStars, isActive',
-    ExpressionAttributeNames: { '#n': 'name', '#d': 'domain' },
+    ProjectionExpression: 'memberId, #n, #r, #d, subdomain, totalStars, isActive',
+    ExpressionAttributeNames: { '#n': 'name', '#r': 'role', '#d': 'domain' },
   };
   const [membersResult, ratingsResult] = await Promise.all([
     db.send(new ScanCommand({ TableName: TABLE.MEMBERS, ...memberProjection })),

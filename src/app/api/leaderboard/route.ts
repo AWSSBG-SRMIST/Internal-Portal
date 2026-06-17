@@ -15,8 +15,8 @@ export async function GET(req: NextRequest) {
     // Only the fields the leaderboard actually renders — cuts payload/RCU on
     // what would otherwise be a full-attribute scan of both tables.
     const memberProjection = {
-      ProjectionExpression: 'memberId, #n, role, #d, subdomain, totalStars, isActive',
-      ExpressionAttributeNames: { '#n': 'name', '#d': 'domain' },
+      ProjectionExpression: 'memberId, #n, #r, #d, subdomain, totalStars, isActive',
+      ExpressionAttributeNames: { '#n': 'name', '#r': 'role', '#d': 'domain' },
     };
     const [membersResult, ratingsResult] = await Promise.all([
       domain
