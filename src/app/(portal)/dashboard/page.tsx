@@ -15,26 +15,18 @@ function isMyTask(
   task: { assignmentType: string; assignedToId?: string | null; domain?: string | null; subdomain?: string | null; createdBy: string },
 ): boolean {
   const s = task.assignmentType;
-  // Org-wide / everyone scopes
   if (s === 'ORG_WIDE' || s === 'GENERAL') return true;
-  // All Directors → only for Directors
   if (s === 'ALL_DIRECTORS') return user.role === 'DIRECTOR';
-  // Targeted at one specific person
   if (s === 'SINGLE_DIRECTOR' || s === 'INDIVIDUAL') return task.assignedToId === user.memberId;
-  // Domain-wide: for anyone in that domain
   if (s === 'DOMAIN_WIDE') return user.domain === task.domain;
-  // Subdomain-wide: anyone in subdomain
   if (s === 'SUBDOMAIN_WIDE') return user.domain === task.domain && user.subdomain === task.subdomain;
-  // Subdomain leadership: Manager + Associates
   if (s === 'SUBDOMAIN_LEADERSHIP') {
     return user.domain === task.domain && user.subdomain === task.subdomain
       && (user.role === 'MANAGER' || user.role === 'ASSOCIATE');
   }
-  // Builders only
   if (s === 'BUILDERS_ONLY') return user.domain === task.domain && user.subdomain === task.subdomain && user.role === 'BUILDER';
-  // Legacy scopes
   if (s === 'PERSONAL') return task.assignedToId === user.memberId;
-  if (s === 'BROADCAST') return !task.domain; // org-wide broadcast
+  if (s === 'BROADCAST') return !task.domain;
   return false;
 }
 
@@ -87,9 +79,9 @@ export default async function DashboardPage() {
   const stats = await getDashboardStats(user);
 
   const statCards = [
-    { label: 'Active Tasks', value: stats.totalTasks, icon: <CheckSquare size={20} />, color: 'text-orange-400', bg: 'bg-orange-500/20', href: '/tasks' },
-    { label: 'Submissions', value: stats.totalSubmissions, icon: <TrendingUp size={20} />, color: 'text-green-400', bg: 'bg-green-500/20', href: '/tasks' },
-    { label: 'Short Links', value: stats.totalLinks, icon: <Link2 size={20} />, color: 'text-purple-400', bg: 'bg-purple-500/20', href: '/links' },
+    { label: 'Active Tasks', value: stats.totalTasks, icon: <CheckSquare size={20} />, color: 'text-[#FF9900]', bg: 'bg-[#FF9900]/10 border border-[#FF9900]/20', href: '/tasks' },
+    { label: 'Submissions', value: stats.totalSubmissions, icon: <TrendingUp size={20} />, color: 'text-green-400', bg: 'bg-green-400/10 border border-green-400/20', href: '/tasks' },
+    { label: 'Short Links', value: stats.totalLinks, icon: <Link2 size={20} />, color: 'text-purple-400', bg: 'bg-purple-400/10 border border-purple-400/20', href: '/links' },
   ];
 
   const isBuilder = user.role === 'BUILDER';
@@ -99,11 +91,11 @@ export default async function DashboardPage() {
     <div className="space-y-6 animate-fadeIn">
       {/* Welcome */}
       <div>
-        <h1 className="text-2xl font-bold text-slate-100">
-          {getGreeting()}, {firstName} 👋
+        <h1 className="text-2xl font-bold text-[#f0f0f0] uppercase tracking-wide">
+          {getGreeting()}, {firstName}<span className="animate-blink text-[#FF9900]">_</span>
         </h1>
-        <p className="text-slate-400 text-sm mt-1">
-          Here&apos;s what&apos;s happening in the AWSSBG dashboard
+        <p className="text-[#666] text-sm mt-1">
+          AWSSBG Internal Dashboard
         </p>
       </div>
 
@@ -114,10 +106,10 @@ export default async function DashboardPage() {
             <div className="stats-card cursor-pointer group">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-slate-400 font-medium">{card.label}</p>
-                  <p className="text-3xl font-bold text-slate-100 mt-1">{card.value}</p>
+                  <p className="text-xs text-[#666] font-bold uppercase tracking-widest">{card.label}</p>
+                  <p className="text-3xl font-bold text-[#f0f0f0] mt-1">{card.value}</p>
                 </div>
-                <div className={`${card.bg} ${card.color} p-3 rounded-xl group-hover:scale-110 transition-transform`}>
+                <div className={`${card.bg} ${card.color} p-3 transition-all`}>
                   {card.icon}
                 </div>
               </div>
@@ -132,28 +124,26 @@ export default async function DashboardPage() {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base">My Tasks</CardTitle>
-              <Link href="/tasks" className="text-xs text-orange-500 hover:text-orange-400">View all →</Link>
+              <Link href="/tasks" className="text-xs text-[#FF9900] hover:text-orange-300">View all →</Link>
             </div>
           </CardHeader>
           <CardContent className="pt-0">
             {stats.myTasks.length === 0 ? (
-              <div className="text-center py-8 text-slate-500">
+              <div className="text-center py-8 text-[#555]">
                 <CheckSquare size={32} className="mx-auto mb-2 opacity-50" />
                 <p className="text-sm">No open tasks right now</p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {stats.myTasks.map((task: any) => (
                   <Link href={`/tasks/${task.taskId}`} key={task.taskId}>
-                    <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-slate-800 transition-colors border border-slate-800">
-                      <div className="w-2 h-2 rounded-full bg-orange-400 mt-1.5 flex-shrink-0" />
+                    <div className="flex items-start gap-3 p-3 hover:bg-[#1a1a1a] transition-colors border border-[#1e1e1e]">
+                      <div className="w-2 h-2 bg-[#FF9900] mt-1.5 flex-shrink-0" />
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-slate-100 truncate">{task.title}</p>
+                        <p className="text-sm font-medium text-[#f0f0f0] truncate">{task.title}</p>
                         <div className="flex items-center gap-2 mt-1">
-                          <Clock size={12} className="text-slate-500" />
-                          <p className="text-xs text-slate-500">
-                            Due {formatDateTime(task.deadline)}
-                          </p>
+                          <Clock size={12} className="text-[#555]" />
+                          <p className="text-xs text-[#555]">Due {formatDateTime(task.deadline)}</p>
                         </div>
                       </div>
                       <Badge className={`${getAssignmentTypeColor(task.assignmentType)} text-xs flex-shrink-0`}>
@@ -167,34 +157,32 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Team Tasks — tasks of those below this user in the hierarchy */}
+        {/* Team Tasks */}
         {!isBuilder && (
           <Card>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base">Team Tasks</CardTitle>
-                <Link href="/tasks" className="text-xs text-orange-500 hover:text-orange-400">View all →</Link>
+                <Link href="/tasks" className="text-xs text-[#FF9900] hover:text-orange-300">View all →</Link>
               </div>
             </CardHeader>
             <CardContent className="pt-0">
               {stats.teamTasks.length === 0 ? (
-                <div className="text-center py-8 text-slate-500">
+                <div className="text-center py-8 text-[#555]">
                   <Users size={32} className="mx-auto mb-2 opacity-50" />
                   <p className="text-sm">No team tasks right now</p>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {stats.teamTasks.map((task: any) => (
                     <Link href={`/tasks/${task.taskId}`} key={task.taskId}>
-                      <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-slate-800 transition-colors border border-slate-800">
-                        <div className="w-2 h-2 rounded-full bg-purple-400 mt-1.5 flex-shrink-0" />
+                      <div className="flex items-start gap-3 p-3 hover:bg-[#1a1a1a] transition-colors border border-[#1e1e1e]">
+                        <div className="w-2 h-2 bg-purple-400 mt-1.5 flex-shrink-0" />
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium text-slate-100 truncate">{task.title}</p>
+                          <p className="text-sm font-medium text-[#f0f0f0] truncate">{task.title}</p>
                           <div className="flex items-center gap-2 mt-1">
-                            <Clock size={12} className="text-slate-500" />
-                            <p className="text-xs text-slate-500">
-                              Due {formatDateTime(task.deadline)}
-                            </p>
+                            <Clock size={12} className="text-[#555]" />
+                            <p className="text-xs text-[#555]">Due {formatDateTime(task.deadline)}</p>
                           </div>
                         </div>
                         <Badge variant="secondary" className="text-xs flex-shrink-0">
@@ -214,27 +202,27 @@ export default async function DashboardPage() {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base">My Submissions</CardTitle>
-              <Link href="/tasks" className="text-xs text-orange-500 hover:text-orange-400">View tasks →</Link>
+              <Link href="/tasks" className="text-xs text-[#FF9900] hover:text-orange-300">View tasks →</Link>
             </div>
           </CardHeader>
           <CardContent className="pt-0">
             {stats.myRecentSubmissions.length === 0 ? (
-              <div className="text-center py-8 text-slate-500">
+              <div className="text-center py-8 text-[#555]">
                 <Star size={32} className="mx-auto mb-2 opacity-50" />
                 <p className="text-sm">No submissions yet</p>
-                <Link href="/tasks" className="text-xs text-orange-500 hover:text-orange-400 mt-1 inline-block">Browse tasks →</Link>
+                <Link href="/tasks" className="text-xs text-[#FF9900] hover:text-orange-300 mt-1 inline-block">Browse tasks →</Link>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {stats.myRecentSubmissions.map((sub: any) => (
-                  <div key={sub.submissionId} className="flex items-center gap-3 p-3 rounded-lg border border-slate-800">
-                    <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                  <div key={sub.submissionId} className="flex items-center gap-3 p-3 border border-[#1e1e1e]">
+                    <div className={`w-2 h-2 flex-shrink-0 ${
                       sub.reviewStatus === 'APPROVED' ? 'bg-green-400' :
                       sub.reviewStatus === 'REJECTED' ? 'bg-red-400' : 'bg-yellow-400'
                     }`} />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-slate-100 truncate">{sub.taskTitle}</p>
-                      <p className="text-xs text-slate-500">{timeAgo(sub.submittedAt)}</p>
+                      <p className="text-sm font-medium text-[#f0f0f0] truncate">{sub.taskTitle}</p>
+                      <p className="text-xs text-[#555]">{timeAgo(sub.submittedAt)}</p>
                     </div>
                     <div className="flex items-center gap-1">
                       {sub.ratingAwarded != null && (
@@ -265,28 +253,28 @@ export default async function DashboardPage() {
         <CardContent className="pt-0">
           <div className="flex flex-wrap gap-6">
             <div>
-              <p className="text-xs text-slate-500 mb-1">Role</p>
+              <p className="text-xs text-[#555] mb-1 uppercase tracking-wide">Role</p>
               <Badge className={getRoleColor(user.role, user.domain)}>{formatRole(user.role, user.domain)}</Badge>
             </div>
             {user.domain && user.role !== 'DIRECTOR' && (
               <div>
-                <p className="text-xs text-slate-500 mb-1">Domain</p>
+                <p className="text-xs text-[#555] mb-1 uppercase tracking-wide">Domain</p>
                 <Badge className={getDomainColor(user.domain)}>{user.domain}</Badge>
               </div>
             )}
             {user.subdomain && (
               <div>
-                <p className="text-xs text-slate-500 mb-1">Subdomain</p>
+                <p className="text-xs text-[#555] mb-1 uppercase tracking-wide">Subdomain</p>
                 <Badge className={getSubdomainColor(user.subdomain)}>{user.subdomain}</Badge>
               </div>
             )}
             <div>
-              <p className="text-xs text-slate-500 mb-1">Email</p>
-              <p className="text-sm text-slate-300">{user.email}</p>
+              <p className="text-xs text-[#555] mb-1 uppercase tracking-wide">Email</p>
+              <p className="text-sm text-[#d0d0d0] font-mono">{user.email}</p>
             </div>
           </div>
           <div className="mt-4">
-            <Link href="/profile" className="text-sm text-orange-500 hover:text-orange-400">
+            <Link href="/profile" className="text-sm text-[#FF9900] hover:text-orange-300">
               View full profile →
             </Link>
           </div>

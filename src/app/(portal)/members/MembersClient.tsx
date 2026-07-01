@@ -2,12 +2,11 @@
 import { useMemo, useState } from 'react';
 import { Search, Users } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Pagination } from '@/components/ui/pagination';
 import { usePagination } from '@/hooks/usePagination';
-import { getRoleColor, getDomainColor, getSubdomainColor, getStarColor, formatRole } from '@/lib/utils';
+import { getStarColor, formatRole } from '@/lib/utils';
 import { DOMAIN_SUBDOMAINS, ROLE_HIERARCHY } from '@/types';
 import type { Domain } from '@/types';
 import Link from 'next/link';
@@ -21,24 +20,24 @@ function MemberMobileCard({ member, hideDomain, hideStars, hideSubdomain, delay 
   return (
     <Link
       href={`/members/${member.memberId}`}
-      className="block rounded-xl border border-slate-800 bg-slate-900 p-4 animate-fadeIn active:bg-slate-800/60"
+      className="block border border-[#1e1e1e] bg-[#111] p-4 animate-fadeIn active:bg-[#1a1a1a] hover:border-[#FF9900] transition-colors"
       style={{ animationDelay: `${delay}ms` }}
     >
       <div className="flex items-center gap-3">
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium text-slate-100 truncate">{member.name}</p>
-          <p className="text-xs text-slate-500 truncate">{member.officialEmail}</p>
+          <p className="text-sm font-bold text-[#f0f0f0] truncate uppercase tracking-wide">{member.name}</p>
+          <p className="text-xs text-[#555] truncate font-mono">{member.officialEmail}</p>
         </div>
         {!hideStars && (
-          <span className={`text-sm font-bold flex-shrink-0 ${getStarColor(member.totalStars)}`}>
+          <span className={`text-sm font-bold flex-shrink-0 font-mono ${getStarColor(member.totalStars)}`}>
             {member.totalStars > 0 ? '+' : ''}{member.totalStars}⭐
           </span>
         )}
       </div>
-      <div className="flex flex-wrap items-center gap-1.5 mt-3">
-        <Badge className={getRoleColor(member.role, member.domain)} variant="secondary">{formatRole(member.role, member.domain)}</Badge>
-        {!hideDomain && member.domain && <Badge className={getDomainColor(member.domain)} variant="secondary">{member.domain}</Badge>}
-        {!hideSubdomain && member.subdomain && <Badge className={getSubdomainColor(member.subdomain)}>{member.subdomain}</Badge>}
+      <div className="flex flex-wrap items-center gap-2 mt-2">
+        <span className="text-xs text-[#888] font-mono uppercase">{formatRole(member.role, member.domain)}</span>
+        {!hideDomain && member.domain && <><span className="text-[#333]">·</span><span className="text-xs text-[#888] font-mono">{member.domain}</span></>}
+        {!hideSubdomain && member.subdomain && <><span className="text-[#333]">·</span><span className="text-xs text-[#888] font-mono">{member.subdomain}</span></>}
       </div>
     </Link>
   );
@@ -49,7 +48,7 @@ function MemberTable({ members, hideDomain, hideStars, hideSubdomain }: { member
 
   return (
     <>
-      {/* Mobile: compact cards carrying the same info the table hides below `sm` */}
+      {/* Mobile cards */}
       <div className="sm:hidden space-y-2">
         {paginatedItems.map((member, idx) => (
           <MemberMobileCard
@@ -63,12 +62,12 @@ function MemberTable({ members, hideDomain, hideStars, hideSubdomain }: { member
         ))}
       </div>
 
-      {/* sm and up: full table */}
+      {/* Desktop table */}
       <div className="table-container hidden sm:block">
       <div className="overflow-x-auto">
       <table className="w-full min-w-[480px]">
         <thead>
-          <tr className="border-b border-slate-800">
+          <tr className="border-b border-[#1e1e1e]">
             <th className="table-header text-left">Member</th>
             <th className="table-header text-left hidden md:table-cell">Role</th>
             {!hideDomain && <th className="table-header text-left hidden lg:table-cell">Domain</th>}
@@ -84,38 +83,32 @@ function MemberTable({ members, hideDomain, hideStars, hideSubdomain }: { member
               <td className="px-4 py-3">
                 <div className="flex items-center gap-3">
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-slate-100 truncate">{member.name}</p>
-                    <p className="text-xs text-slate-500 truncate">{member.officialEmail}</p>
+                    <p className="text-sm font-bold text-[#f0f0f0] truncate">{member.name}</p>
+                    <p className="text-xs text-[#555] truncate font-mono">{member.officialEmail}</p>
                   </div>
                 </div>
               </td>
               <td className="px-4 py-3 hidden md:table-cell">
-                <Badge className={getRoleColor(member.role, member.domain)} variant="secondary">{formatRole(member.role, member.domain)}</Badge>
+                <span className="text-xs text-[#888] font-mono uppercase">{formatRole(member.role, member.domain)}</span>
               </td>
               {!hideDomain && (
                 <td className="px-4 py-3 hidden lg:table-cell">
-                  {member.domain
-                    ? <Badge className={getDomainColor(member.domain)} variant="secondary">{member.domain}</Badge>
-                    : <span className="text-xs text-slate-600">—</span>
-                  }
+                  <span className="text-xs text-[#888] font-mono">{member.domain || '—'}</span>
                 </td>
               )}
               {!hideSubdomain && (
                 <td className="px-4 py-3 hidden lg:table-cell">
-                  {member.subdomain
-                    ? <Badge className={getSubdomainColor(member.subdomain)}>{member.subdomain}</Badge>
-                    : <span className="text-xs text-slate-600">—</span>
-                  }
+                  <span className="text-xs text-[#888] font-mono">{member.subdomain || '—'}</span>
                 </td>
               )}
               {!hideStars && (
                 <td className="px-4 py-3 text-right hidden sm:table-cell">
-                  <span className={`text-sm font-bold ${getStarColor(member.totalStars)}`}>
+                  <span className={`text-sm font-bold font-mono ${getStarColor(member.totalStars)}`}>
                     {member.totalStars > 0 ? '+' : ''}{member.totalStars}⭐
                   </span>
                 </td>
               )}
-              <td className="px-4 py-3 text-xs text-slate-500 hidden lg:table-cell">{member.clubId}</td>
+              <td className="px-4 py-3 text-xs text-[#555] hidden lg:table-cell font-mono">{member.clubId}</td>
               <td className="px-4 py-3 text-center">
                 <Link href={`/members/${member.memberId}`}>
                   <Button variant="ghost" size="sm" className="text-xs">View</Button>
@@ -146,8 +139,6 @@ export default function MembersClient({ initialMembers }: { initialMembers: Memb
     return matchSearch && matchRole && matchDomain;
   }), [initialMembers, search, roleFilter, domainFilter]);
 
-  // Presidium (SBG Leader + Secretary) and Board of Directors sit above the
-  // domain split; everyone else is grouped by domain, then by subdomain.
   const { presidium, directors, domainGroups } = useMemo(() => {
     const presidium = filtered
       .filter(m => m.role === 'SBG_LEADER' || m.role === 'SECRETARY')
@@ -178,14 +169,14 @@ export default function MembersClient({ initialMembers }: { initialMembers: Memb
     <div className="space-y-6 animate-fadeIn">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-100">Members</h1>
-          <p className="text-sm text-slate-400 mt-1">{initialMembers.length} members</p>
+          <h1 className="text-2xl font-bold text-[#f0f0f0] uppercase tracking-wide">Members</h1>
+          <p className="text-sm text-[#666] mt-1 font-mono">{initialMembers.length} members</p>
         </div>
       </div>
 
       <div className="flex flex-wrap gap-3">
         <div className="relative flex-1 min-w-48">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#555]" />
           <Input placeholder="Search by name, email, Club ID..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
         </div>
         <Select value={roleFilter} onValueChange={setRoleFilter}>
@@ -212,34 +203,32 @@ export default function MembersClient({ initialMembers }: { initialMembers: Memb
       </div>
 
       {!hasGroups ? (
-        <div className="text-center py-16 text-slate-500">
+        <div className="text-center py-16 text-[#555]">
           <Users size={48} className="mx-auto mb-3 opacity-30" />
-          <p className="font-medium">No members found</p>
+          <p className="font-bold uppercase tracking-wide">No members found</p>
         </div>
       ) : (
         <div className="space-y-8">
           {presidium.length > 0 && (
             <div className="space-y-3">
-              <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wide">Presidium</h2>
+              <h2 className="text-xs font-bold text-[#666] uppercase tracking-widest border-l-2 border-[#FF9900] pl-3">Presidium</h2>
               <MemberTable members={presidium} hideDomain hideStars hideSubdomain />
             </div>
           )}
 
           {directors.length > 0 && (
             <div className="space-y-3">
-              <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wide">Board of Directors</h2>
+              <h2 className="text-xs font-bold text-[#666] uppercase tracking-widest border-l-2 border-[#FF9900] pl-3">Board of Directors</h2>
               <MemberTable members={directors} hideDomain hideSubdomain />
             </div>
           )}
 
           {domainGroups.map(group => (
             <div key={group.domain} className="space-y-5">
-              <div className="flex items-center gap-2">
-                <Badge className={getDomainColor(group.domain)} variant="secondary">{group.domain}</Badge>
-              </div>
+              <h2 className="text-xs font-bold text-[#666] uppercase tracking-widest border-l-2 border-[#FF9900] pl-3">{group.domain}</h2>
               {group.subdomainGroups.map(sg => (
-                <div key={sg.subdomain} className="space-y-2 pl-1 border-l-2 border-slate-800">
-                  <h3 className="text-sm font-semibold text-slate-200 pl-3">{sg.subdomain}</h3>
+                <div key={sg.subdomain} className="space-y-2 pl-1 border-l-2 border-[#2d2d2d]">
+                  <h3 className="text-sm font-bold text-[#e0e0e0] pl-3 uppercase tracking-wide">{sg.subdomain}</h3>
                   <MemberTable members={sg.members} />
                 </div>
               ))}

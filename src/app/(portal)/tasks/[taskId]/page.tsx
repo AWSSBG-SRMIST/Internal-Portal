@@ -84,8 +84,6 @@ export default function TaskDetailPage({ params }: { params: Promise<{ taskId: s
     const prevData = data;
     const optimisticStatus = action === 'APPROVE' ? 'APPROVED' : action === 'REJECT' ? 'REJECTED' : 'REVISION_REQUESTED';
     setReviewing(submissionId + action);
-    // Optimistic: flip the submission's status immediately; reconciled with
-    // authoritative data (ratingAwarded, reviewedByName) once the request settles.
     setData(d => d ? {
       ...d,
       submissions: d.submissions.map(s => s.submissionId === submissionId ? { ...s, reviewStatus: optimisticStatus } : s),
@@ -135,7 +133,7 @@ export default function TaskDetailPage({ params }: { params: Promise<{ taskId: s
   if (loading) return (
     <div className="max-w-3xl mx-auto space-y-6">
       <div className="flex items-start gap-3">
-        <Skeleton className="h-9 w-9 rounded-lg flex-shrink-0" />
+        <Skeleton className="h-9 w-9 flex-shrink-0" />
         <div className="flex-1 space-y-2">
           <Skeleton className="h-5 w-24" />
           <Skeleton className="h-6 w-2/3" />
@@ -175,16 +173,16 @@ export default function TaskDetailPage({ params }: { params: Promise<{ taskId: s
                 {task.subdomain && <Badge className={getSubdomainColor(task.subdomain)}>{task.subdomain}</Badge>}
                 {task.priority && <Badge className={getPriorityColor(task.priority)}>{task.priority}</Badge>}
               </div>
-              <h1 className="text-xl sm:text-2xl font-bold text-slate-100">{task.title}</h1>
-              <div className="flex flex-wrap gap-3 sm:gap-4 mt-2 text-sm text-slate-400">
+              <h1 className="text-xl sm:text-2xl font-bold text-[#f0f0f0] uppercase tracking-wide">{task.title}</h1>
+              <div className="flex flex-wrap gap-3 sm:gap-4 mt-2 text-sm text-[#888] font-mono">
                 <span className="flex items-center gap-1">
-                  <User size={14} /> Created by {task.createdByName}
+                  <User size={14} /> {task.createdByName}
                 </span>
                 <span className="flex items-center gap-1">
                   <Calendar size={14} /> {timeAgo(task.createdAt)}
                 </span>
-                <span className={`flex items-center gap-1 ${overdue ? 'text-red-400 font-medium' : ''}`}>
-                  <Clock size={14} /> Due: {formatDateTime(task.deadline)}
+                <span className={`flex items-center gap-1 ${overdue ? 'text-red-400 font-bold' : ''}`}>
+                  <Clock size={14} /> {formatDateTime(task.deadline)}
                 </span>
               </div>
             </div>
@@ -212,21 +210,21 @@ export default function TaskDetailPage({ params }: { params: Promise<{ taskId: s
       <Card>
         <CardHeader><CardTitle className="text-base">Description</CardTitle></CardHeader>
         <CardContent>
-          <p className="text-slate-300 whitespace-pre-wrap">{task.description}</p>
+          <p className="text-[#d0d0d0] whitespace-pre-wrap font-mono text-sm leading-relaxed">{task.description}</p>
         </CardContent>
       </Card>
 
       {/* Rating Info */}
       <Card className="bg-blue-500/10 border-blue-500/30">
         <CardContent className="p-4">
-          <h3 className="text-sm font-semibold text-blue-300 mb-2 flex items-center gap-2"><Star size={14} /> Rating Guide</h3>
-          <div className="grid grid-cols-2 gap-1.5 text-xs text-blue-400">
+          <h3 className="text-sm font-bold text-blue-300 mb-2 flex items-center gap-2 uppercase tracking-wide"><Star size={14} /> Rating Guide</h3>
+          <div className="grid grid-cols-2 gap-1.5 text-xs text-blue-400 font-mono">
             <div><span className="font-bold text-green-400">+2⭐</span> &gt;24h before deadline</div>
             <div><span className="font-bold text-blue-400">+1⭐</span> Last 24h before deadline</div>
-            <div><span className="font-bold text-slate-400">+0⭐</span> Within 24h after deadline</div>
+            <div><span className="font-bold text-[#888]">+0⭐</span> Within 24h after deadline</div>
             <div><span className="font-bold text-red-400">-1⭐</span> More than 24h after deadline</div>
           </div>
-          <p className="text-xs text-blue-500 mt-2">Priority multiplier: LOW×1 · MEDIUM×1.5 · HIGH×2</p>
+          <p className="text-xs text-blue-500 mt-2 font-mono">Priority: LOW×1 · MEDIUM×1.5 · HIGH×2</p>
         </CardContent>
       </Card>
 
@@ -258,24 +256,24 @@ export default function TaskDetailPage({ params }: { params: Promise<{ taskId: s
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <p className="text-sm text-slate-300 whitespace-pre-wrap">{mySubmission.content}</p>
+            <p className="text-sm text-[#d0d0d0] whitespace-pre-wrap font-mono leading-relaxed">{mySubmission.content}</p>
             {mySubmission.links.length > 0 && (
               <div className="space-y-1">
                 {mySubmission.links.map((link, i) => (
                   <a key={i} href={link} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-1 text-sm text-orange-500 hover:text-orange-400">
+                    className="flex items-center gap-1 text-sm text-[#FF9900] hover:text-orange-300">
                     <Link2 size={12} />{link}<ExternalLink size={11} />
                   </a>
                 ))}
               </div>
             )}
             {mySubmission.reviewFeedback && (
-              <div className="rounded-lg border border-slate-700 bg-slate-800/60 p-3 text-sm text-slate-300">
-                <p className="text-xs font-medium text-slate-400 mb-1">Reviewer feedback</p>
-                <p className="whitespace-pre-wrap">{mySubmission.reviewFeedback}</p>
+              <div className="border border-[#2d2d2d] bg-[#1a1a1a] p-3 text-sm text-[#d0d0d0]">
+                <p className="text-xs font-bold text-[#888] uppercase tracking-wide mb-1">Reviewer Feedback</p>
+                <p className="whitespace-pre-wrap font-mono">{mySubmission.reviewFeedback}</p>
               </div>
             )}
-            <div className="text-xs text-slate-500 space-y-1">
+            <div className="text-xs text-[#555] font-mono space-y-1">
               <p>Submitted: {formatDateTime(mySubmission.submittedAt)} · {getSubmissionTimingLabel(mySubmission.submittedAt, task.deadline)}</p>
               {mySubmission.reviewedBy && <p>Reviewed by {mySubmission.reviewedByName} · {formatDateTime(mySubmission.reviewedAt!)}</p>}
             </div>
@@ -298,7 +296,7 @@ export default function TaskDetailPage({ params }: { params: Promise<{ taskId: s
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-300">Your work / response *</label>
+                  <label className="text-xs font-bold text-[#aaa] uppercase tracking-wide">Your work / response *</label>
                   <Textarea
                     value={content}
                     onChange={e => setContent(e.target.value)}
@@ -309,7 +307,7 @@ export default function TaskDetailPage({ params }: { params: Promise<{ taskId: s
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-300">Links (optional)</label>
+                  <label className="text-xs font-bold text-[#aaa] uppercase tracking-wide">Links (optional)</label>
                   {links.map((link, i) => (
                     <div key={i} className="flex gap-2">
                       <Input
@@ -343,15 +341,15 @@ export default function TaskDetailPage({ params }: { params: Promise<{ taskId: s
         </Card>
       )}
 
-      {/* COLLECTIVE locked — someone has submitted, waiting for review */}
+      {/* COLLECTIVE locked */}
       {collectiveLockedBy && task.status === 'OPEN' && !mySubmission && (
         <Card className="bg-purple-500/10 border-purple-500/40">
           <CardContent className="p-4 flex items-start gap-3">
             <Lock size={18} className="text-purple-400 mt-0.5 flex-shrink-0" />
             <div>
-              <p className="text-sm font-semibold text-purple-300">Submission locked</p>
+              <p className="text-sm font-bold text-purple-300 uppercase tracking-wide">Submission Locked</p>
               <p className="text-sm text-purple-400 mt-0.5">
-                <span className="font-medium text-purple-200">{collectiveLockedBy.memberName}</span> has already submitted for this task.
+                <span className="font-bold text-purple-200">{collectiveLockedBy.memberName}</span> has already submitted for this task.
                 Once reviewed, the task will either close (approved) or reopen for others (rejected).
               </p>
             </div>
@@ -360,8 +358,8 @@ export default function TaskDetailPage({ params }: { params: Promise<{ taskId: s
       )}
 
       {task.status === 'CLOSED' && !mySubmission && (
-        <Card className="bg-slate-800 border-slate-700">
-          <CardContent className="p-4 text-center text-slate-400 text-sm">
+        <Card className="bg-[#1a1a1a] border-[#2d2d2d]">
+          <CardContent className="p-4 text-center text-[#666] text-sm font-mono uppercase tracking-wide">
             This task is closed. No new submissions are being accepted.
           </CardContent>
         </Card>
@@ -373,7 +371,7 @@ export default function TaskDetailPage({ params }: { params: Promise<{ taskId: s
           <CardHeader>
             <CardTitle className="text-base flex items-center justify-between">
               <span>Submissions ({submissions.length})</span>
-              <div className="flex gap-2 text-xs">
+              <div className="flex gap-3 text-xs font-mono">
                 <span className="text-green-400">{submissions.filter(s => s.reviewStatus === 'APPROVED').length} approved</span>
                 <span className="text-yellow-400">{submissions.filter(s => s.reviewStatus === 'PENDING').length} pending</span>
                 <span className="text-red-400">{submissions.filter(s => s.reviewStatus === 'REJECTED').length} rejected</span>
@@ -382,19 +380,19 @@ export default function TaskDetailPage({ params }: { params: Promise<{ taskId: s
           </CardHeader>
           <CardContent className="space-y-4">
             {submissions.length === 0 ? (
-              <p className="text-center text-slate-500 py-8 text-sm">No submissions yet</p>
+              <p className="text-center text-[#555] py-8 text-sm font-mono uppercase tracking-wide">No submissions yet</p>
             ) : submissions.map(sub => (
-              <div key={sub.submissionId} className={`border rounded-xl p-4 space-y-3 ${
+              <div key={sub.submissionId} className={`border-2 p-4 space-y-3 ${
                 sub.reviewStatus === 'APPROVED'           ? 'border-green-500/30 bg-green-500/5' :
                 sub.reviewStatus === 'REJECTED'           ? 'border-red-500/30 bg-red-500/5' :
                 sub.reviewStatus === 'REVISION_REQUESTED' ? 'border-orange-500/30 bg-orange-500/5' :
-                'border-slate-700'
+                'border-[#2d2d2d]'
               }`}>
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 min-w-0 flex-1">
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-slate-100 truncate">{sub.memberName}</p>
-                      <p className="text-xs text-slate-500 truncate">
+                      <p className="text-sm font-bold text-[#f0f0f0] truncate uppercase tracking-wide">{sub.memberName}</p>
+                      <p className="text-xs text-[#555] truncate font-mono">
                         {formatDateTime(sub.submittedAt)} · {getSubmissionTimingLabel(sub.submittedAt, task.deadline)}
                       </p>
                     </div>
@@ -414,19 +412,19 @@ export default function TaskDetailPage({ params }: { params: Promise<{ taskId: s
                     </Badge>
                   </div>
                 </div>
-                <p className="text-sm text-slate-300 whitespace-pre-wrap">{sub.content}</p>
+                <p className="text-sm text-[#d0d0d0] whitespace-pre-wrap font-mono leading-relaxed">{sub.content}</p>
                 {sub.links.length > 0 && (
                   <div className="flex flex-wrap gap-2">
                     {sub.links.map((link: string, i: number) => (
                       <a key={i} href={link} target="_blank" rel="noopener noreferrer"
-                        className="flex items-center gap-1 text-xs text-orange-500 hover:text-orange-400 border border-orange-500/30 rounded px-2 py-1">
+                        className="flex items-center gap-1 text-xs text-[#FF9900] hover:text-orange-300 border border-[#FF9900]/30 px-2 py-1">
                         <Link2 size={11} />{new URL(link).hostname}<ExternalLink size={10} />
                       </a>
                     ))}
                   </div>
                 )}
                 {sub.reviewStatus === 'PENDING' && (
-                  <div className="space-y-2 pt-2 border-t border-slate-700">
+                  <div className="space-y-2 pt-2 border-t border-[#2d2d2d]">
                     <Textarea
                       value={feedbackDrafts[sub.submissionId] || ''}
                       onChange={e => setFeedbackDrafts(f => ({ ...f, [sub.submissionId]: e.target.value }))}
@@ -467,13 +465,13 @@ export default function TaskDetailPage({ params }: { params: Promise<{ taskId: s
                   </div>
                 )}
                 {sub.reviewStatus !== 'PENDING' && sub.reviewFeedback && (
-                  <div className="rounded-lg border border-slate-700 bg-slate-800/60 p-3 text-sm text-slate-300">
-                    <p className="text-xs font-medium text-slate-400 mb-1">Reviewer feedback</p>
-                    <p className="whitespace-pre-wrap">{sub.reviewFeedback}</p>
+                  <div className="border border-[#2d2d2d] bg-[#1a1a1a] p-3 text-sm text-[#d0d0d0]">
+                    <p className="text-xs font-bold text-[#888] uppercase tracking-wide mb-1">Reviewer Feedback</p>
+                    <p className="whitespace-pre-wrap font-mono">{sub.reviewFeedback}</p>
                   </div>
                 )}
                 {sub.reviewStatus !== 'PENDING' && sub.reviewedByName && (
-                  <p className="text-xs text-slate-500 border-t border-slate-800 pt-2">
+                  <p className="text-xs text-[#555] border-t border-[#1e1e1e] pt-2 font-mono">
                     Reviewed by {sub.reviewedByName} · {formatDateTime(sub.reviewedAt!)}
                   </p>
                 )}

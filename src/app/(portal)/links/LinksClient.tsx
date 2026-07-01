@@ -79,7 +79,6 @@ export default function LinksClient({ me, initialLinks }: { me: SessionUser; ini
     const code = deleteTarget;
     if (!code) return;
     const removed = links.find(l => l.shortCode === code);
-    // Optimistic: remove immediately, roll back if the request fails.
     setLinks(ls => ls.filter(l => l.shortCode !== code));
     setDeleting(true);
     try {
@@ -106,8 +105,8 @@ export default function LinksClient({ me, initialLinks }: { me: SessionUser; ini
 
   if (me.role === 'BUILDER') {
     return (
-      <div className="max-w-2xl mx-auto py-16 text-center text-slate-400">
-        <p>You are not authorized to use the Link Shortener.</p>
+      <div className="max-w-2xl mx-auto py-16 text-center text-[#666]">
+        <p className="font-mono uppercase tracking-wide">You are not authorized to use the Link Shortener.</p>
       </div>
     );
   }
@@ -116,16 +115,16 @@ export default function LinksClient({ me, initialLinks }: { me: SessionUser; ini
     <div className="space-y-6 animate-fadeIn">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-100">Link Shortener</h1>
-          <p className="text-sm text-slate-400 mt-1">{links.length} short links</p>
+          <h1 className="text-2xl font-bold text-[#f0f0f0] uppercase tracking-wide">Link Shortener</h1>
+          <p className="text-sm text-[#666] mt-1 font-mono">{links.length} short links</p>
         </div>
         <Button onClick={() => setShowCreate(true)}><Plus size={16} /> New Link</Button>
       </div>
 
       {links.length === 0 ? (
-        <div className="text-center py-16 text-slate-500">
+        <div className="text-center py-16 text-[#555]">
           <Link2 size={48} className="mx-auto mb-3 opacity-30" />
-          <p className="font-medium">No short links yet</p>
+          <p className="font-bold uppercase tracking-wide">No short links yet</p>
           <Button className="mt-4" variant="outline" onClick={() => setShowCreate(true)}>
             <Plus size={14} /> Create your first link
           </Button>
@@ -139,18 +138,18 @@ export default function LinksClient({ me, initialLinks }: { me: SessionUser; ini
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <code className="bg-orange-500/20 text-orange-400 px-2 py-0.5 rounded font-mono text-sm font-bold">
+                        <code className="bg-[#FF9900]/15 text-[#FF9900] px-2 py-0.5 font-mono text-sm font-bold border border-[#FF9900]/20">
                           /s/{link.shortCode}
                         </code>
-                        <Badge variant="outline" className="text-xs">{link.clicks} clicks</Badge>
+                        <Badge variant="outline" className="text-xs font-mono">{link.clicks} clicks</Badge>
                       </div>
-                      {link.description && <p className="text-sm font-medium text-slate-100 mb-1">{link.description}</p>}
+                      {link.description && <p className="text-sm font-bold text-[#f0f0f0] mb-1 uppercase tracking-wide">{link.description}</p>}
                       <a href={link.originalUrl} target="_blank" rel="noopener noreferrer"
-                        className="text-xs text-slate-500 hover:text-orange-500 flex items-center gap-1 truncate">
+                        className="text-xs text-[#555] hover:text-[#FF9900] flex items-center gap-1 truncate font-mono">
                         {link.originalUrl}<ExternalLink size={10} />
                       </a>
-                      <p className="text-xs text-slate-500 mt-1" title={formatDateTime(link.createdAt)}>
-                        Created by <span className="text-slate-400 font-medium">{link.createdByName}</span> on {formatDateTime(link.createdAt)} ({timeAgo(link.createdAt)})
+                      <p className="text-xs text-[#555] mt-1 font-mono">
+                        by <span className="text-[#888] font-bold">{link.createdByName}</span> · {formatDateTime(link.createdAt)} ({timeAgo(link.createdAt)})
                       </p>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
@@ -189,7 +188,7 @@ export default function LinksClient({ me, initialLinks }: { me: SessionUser; ini
             <div className="space-y-2">
               <Label>Custom Code (optional)</Label>
               <div className="flex items-center gap-2">
-                <span className="text-sm text-slate-500 whitespace-nowrap">{appUrl}/s/</span>
+                <span className="text-sm text-[#555] whitespace-nowrap font-mono">{appUrl}/s/</span>
                 <div className="relative flex-1">
                   <Input
                     placeholder="my-link"
@@ -198,15 +197,15 @@ export default function LinksClient({ me, initialLinks }: { me: SessionUser; ini
                     className="pr-8"
                   />
                   <span className="absolute right-2 top-1/2 -translate-y-1/2">
-                    {codeStatus === 'checking' && <Loader2 size={14} className="animate-spin text-slate-500" />}
+                    {codeStatus === 'checking' && <Loader2 size={14} className="animate-spin text-[#555]" />}
                     {codeStatus === 'available' && <Check size={14} className="text-green-400" />}
                     {codeStatus === 'taken' && <X size={14} className="text-red-400" />}
                   </span>
                 </div>
               </div>
-              {codeStatus === 'taken' && <p className="text-xs text-red-400">That code is already taken — try another one.</p>}
-              {codeStatus === 'available' && <p className="text-xs text-green-400">Available!</p>}
-              {codeStatus === 'idle' && <p className="text-xs text-slate-500">Leave blank for auto-generated code</p>}
+              {codeStatus === 'taken' && <p className="text-xs text-red-400 font-mono">That code is already taken — try another one.</p>}
+              {codeStatus === 'available' && <p className="text-xs text-green-400 font-mono">Available!</p>}
+              {codeStatus === 'idle' && <p className="text-xs text-[#555] font-mono">Leave blank for auto-generated code</p>}
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setShowCreate(false)}>Cancel</Button>

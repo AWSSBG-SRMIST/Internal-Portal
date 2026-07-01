@@ -22,9 +22,6 @@ function formatDateForDisplay(iso: string) {
   return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
 }
 
-// Minutes are written for a meeting that already happened — never a future
-// one. Computed once at module load (local time), used as both the date
-// picker's hard `max` and a belt-and-braces runtime check.
 function getTodayStr() {
   const now = new Date();
   now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
@@ -32,16 +29,12 @@ function getTodayStr() {
 }
 const todayStr = getTodayStr();
 
-// Live mask while typing: raw digits, colon auto-inserted once a 3rd digit
-// shows up (so "0530" becomes "05:30" without the user typing the colon).
 function maskTimeInput(raw: string) {
   const digits = raw.replace(/\D/g, '').slice(0, 4);
   if (digits.length <= 2) return digits;
   return `${digits.slice(0, 2)}:${digits.slice(2)}`;
 }
 
-// On blur: pad and clamp into a real HH:MM — "1" becomes "01:00", "930"
-// becomes "09:30", "1370" becomes "12:50" (capped, not silently wrong).
 function normalizeTime(raw: string) {
   const digits = raw.replace(/\D/g, '');
   if (!digits) return '';
@@ -92,8 +85,6 @@ export default function MoMPage() {
     fetch('/api/members').then(r => r.json()).then(d => { if (d.success) setMembers(d.data); });
   }, []);
 
-  // Always whoever is actually filling out this form right now — never
-  // editable, since "Prepared By" is just a fact about who used the tool.
   const preparedBy = me ? `${me.name} - ${formatRole(me.role, me.domain)}` : '';
 
   const addedNames = useMemo(() => new Set(attendees.map(a => a.name.toLowerCase())), [attendees]);
@@ -110,9 +101,6 @@ export default function MoMPage() {
     setAttendees(a => a.filter(x => x.name !== name));
   }
 
-  // Best-effort match against the club roster — exact, case-insensitive name
-  // match. Anything that doesn't match (guests, typos from the extension
-  // export) still gets added, just without a resolved role.
   function importPasted() {
     const lines = pasteText.split('\n').map(l => l.trim()).filter(Boolean);
     if (lines.length === 0) return;
@@ -122,7 +110,7 @@ export default function MoMPage() {
       const next = [...prev];
       const seen = new Set(next.map(a => a.name.toLowerCase()));
       for (const line of lines) {
-        const cleaned = line.replace(/\(.*?\)/g, '').trim(); // strip "(You)", "(Host)" etc.
+        const cleaned = line.replace(/\(.*?\)/g, '').trim();
         if (!cleaned || seen.has(cleaned.toLowerCase())) continue;
         const match = byNameLower.get(cleaned.toLowerCase());
         next.push({ name: cleaned, role: match ? formatRole(match.role, match.domain) : '' });
@@ -243,16 +231,16 @@ export default function MoMPage() {
   if (!me) {
     return (
       <div className="flex justify-center py-16">
-        <Loader2 size={32} className="animate-spin text-orange-500" />
+        <Loader2 size={32} className="animate-spin text-[#FF9900]" />
       </div>
     );
   }
 
   if (!canGenerateMoM(me)) {
     return (
-      <div className="max-w-2xl mx-auto py-16 text-center text-slate-400">
-        <p>You are not authorized to generate Minutes of Meeting.</p>
-        <Link href="/dashboard" className="text-sm text-orange-500 hover:text-orange-400 mt-2 inline-block">Back to dashboard →</Link>
+      <div className="max-w-2xl mx-auto py-16 text-center text-[#666]">
+        <p className="font-mono uppercase tracking-wide">You are not authorized to generate Minutes of Meeting.</p>
+        <Link href="/dashboard" className="text-sm text-[#FF9900] hover:text-orange-300 mt-2 inline-block">Back to dashboard →</Link>
       </div>
     );
   }
@@ -263,16 +251,16 @@ export default function MoMPage() {
         <div className="flex items-center gap-3">
           <Button type="button" variant="ghost" size="icon" onClick={() => setStep('form')}><ArrowLeft size={18} /></Button>
           <div>
-            <h1 className="text-2xl font-bold text-slate-100">Preview</h1>
-            <p className="text-sm text-slate-400">Check the draft, request changes, then download</p>
+            <h1 className="text-2xl font-bold text-[#f0f0f0] uppercase tracking-wide">Preview</h1>
+            <p className="text-sm text-[#666] font-mono">Check the draft, request changes, then download</p>
           </div>
         </div>
 
         <Card>
-          <CardHeader><CardTitle className="text-base flex items-center gap-2"><ListChecks size={16} className="text-orange-500" /> Agenda</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-base flex items-center gap-2"><ListChecks size={16} className="text-[#FF9900]" /> Agenda</CardTitle></CardHeader>
           <CardContent>
-            {structured.agenda.length === 0 ? <p className="text-sm text-slate-500">No agenda items drafted.</p> : (
-              <ul className="space-y-1.5 text-sm text-slate-200 list-disc list-inside">
+            {structured.agenda.length === 0 ? <p className="text-sm text-[#555] font-mono">No agenda items drafted.</p> : (
+              <ul className="space-y-1.5 text-sm text-[#e0e0e0] list-disc list-inside font-mono">
                 {structured.agenda.map((item, i) => <li key={i}>{item}</li>)}
               </ul>
             )}
@@ -282,11 +270,11 @@ export default function MoMPage() {
         <Card>
           <CardHeader><CardTitle className="text-base">Discussion Summary</CardTitle></CardHeader>
           <CardContent className="space-y-4">
-            {structured.discussion.length === 0 ? <p className="text-sm text-slate-500">No discussion sections drafted.</p> : (
+            {structured.discussion.length === 0 ? <p className="text-sm text-[#555] font-mono">No discussion sections drafted.</p> : (
               structured.discussion.map((section, i) => (
                 <div key={i}>
-                  <p className="text-sm font-semibold text-slate-100 mb-1">{i + 1}. {section.title}</p>
-                  <ul className="space-y-1 text-sm text-slate-300 list-disc list-inside ml-1">
+                  <p className="text-sm font-bold text-[#f0f0f0] mb-1 uppercase tracking-wide">{i + 1}. {section.title}</p>
+                  <ul className="space-y-1 text-sm text-[#d0d0d0] list-disc list-inside ml-1 font-mono">
                     {section.points.map((p, j) => <li key={j}>{p}</li>)}
                   </ul>
                 </div>
@@ -295,8 +283,8 @@ export default function MoMPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-orange-500/5 border-orange-500/20">
-          <CardHeader><CardTitle className="text-base flex items-center gap-2"><Wand2 size={16} className="text-orange-400" /> Want changes?</CardTitle></CardHeader>
+        <Card className="bg-[#FF9900]/5 border-[#FF9900]/20">
+          <CardHeader><CardTitle className="text-base flex items-center gap-2"><Wand2 size={16} className="text-[#FF9900]" /> Want changes?</CardTitle></CardHeader>
           <CardContent className="space-y-2">
             <Textarea
               rows={3}
@@ -323,10 +311,10 @@ export default function MoMPage() {
   return (
     <div className="max-w-2xl mx-auto space-y-6 animate-fadeIn">
       <div className="flex items-center gap-3">
-        <NotebookPen size={22} className="text-orange-500" />
+        <NotebookPen size={22} className="text-[#FF9900]" />
         <div>
-          <h1 className="text-2xl font-bold text-slate-100">Minutes of Meeting</h1>
-          <p className="text-sm text-slate-400">Paste your notes, preview the draft, then generate the PDF</p>
+          <h1 className="text-2xl font-bold text-[#f0f0f0] uppercase tracking-wide">Minutes of Meeting</h1>
+          <p className="text-sm text-[#666] font-mono">Paste your notes, preview the draft, then generate the PDF</p>
         </div>
       </div>
 
@@ -380,7 +368,7 @@ export default function MoMPage() {
             </div>
             <div className="space-y-2">
               <Label>Prepared By</Label>
-              <p className="flex h-9 items-center rounded-lg border border-slate-800 bg-slate-900 px-3 text-sm text-slate-400">{preparedBy}</p>
+              <p className="flex h-9 items-center border border-[#1e1e1e] bg-[#111] px-3 text-sm text-[#666] font-mono">{preparedBy}</p>
             </div>
             <div className="space-y-2">
               <Label>Reviewed By</Label>
@@ -391,7 +379,9 @@ export default function MoMPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-base">Attendees <span className="text-slate-500 font-normal">({attendees.length})</span></CardTitle>
+            <CardTitle className="text-base">
+              Attendees <span className="text-[#555] font-normal font-mono">({attendees.length})</span>
+            </CardTitle>
             <Button type="button" variant="outline" size="sm" onClick={() => setShowPaste(s => !s)}>
               <ClipboardPaste size={14} /> Paste list
             </Button>
@@ -409,8 +399,8 @@ export default function MoMPage() {
             </div>
 
             {showPaste && (
-              <div className="space-y-2 border border-slate-800 rounded-lg p-3 bg-slate-900/60">
-                <Label className="text-xs text-slate-400">Paste names (one per line) — from the meeting extension's participant list</Label>
+              <div className="space-y-2 border border-[#1e1e1e] p-3 bg-[#111]">
+                <Label className="text-xs text-[#666]">Paste names (one per line) — from the meeting extension's participant list</Label>
                 <Textarea rows={4} value={pasteText} onChange={e => setPasteText(e.target.value)} placeholder={'Aakarsh Kumar\nPraveen Saravanan\n...'} />
                 <Button type="button" size="sm" onClick={importPasted}><Plus size={14} /> Import</Button>
               </div>
@@ -419,12 +409,12 @@ export default function MoMPage() {
             {attendees.length > 0 && (
               <div className="space-y-1.5">
                 {attendees.map(a => (
-                  <div key={a.name} className="flex items-center justify-between gap-2 bg-slate-800/60 rounded-lg px-3 py-2 text-sm">
+                  <div key={a.name} className="flex items-center justify-between gap-2 bg-[#1a1a1a] border border-[#1e1e1e] px-3 py-2 text-sm">
                     <div className="min-w-0">
-                      <span className="text-slate-100 font-medium">{a.name}</span>
-                      {a.role && <span className="text-slate-500 ml-2">{a.role}</span>}
+                      <span className="text-[#f0f0f0] font-bold">{a.name}</span>
+                      {a.role && <span className="text-[#555] ml-2 font-mono text-xs">{a.role}</span>}
                     </div>
-                    <button type="button" onClick={() => removeAttendee(a.name)} className="text-slate-500 hover:text-red-400 flex-shrink-0">
+                    <button type="button" onClick={() => removeAttendee(a.name)} className="text-[#555] hover:text-red-400 flex-shrink-0">
                       <X size={14} />
                     </button>
                   </div>

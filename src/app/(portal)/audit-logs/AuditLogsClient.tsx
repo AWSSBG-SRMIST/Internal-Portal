@@ -14,24 +14,23 @@ import type { AuditLog } from '@/types';
 
 const PAGE_SIZE = 20;
 
-// Every action gets its own unique color — no two actions share a swatch.
 const ACTION_COLORS: Record<string, string> = {
-  CREATE_MEMBER: 'bg-green-500/20 text-green-300',
-  UPDATE_MEMBER: 'bg-blue-500/20 text-blue-300',
-  DEACTIVATE_MEMBER: 'bg-red-500/20 text-red-300',
-  CREATE_TASK: 'bg-orange-500/20 text-orange-300',
-  UPDATE_TASK: 'bg-yellow-500/20 text-yellow-300',
-  DELETE_TASK: 'bg-rose-500/20 text-rose-300',
-  SUBMIT_TASK: 'bg-purple-500/20 text-purple-300',
+  CREATE_MEMBER:      'bg-green-500/20 text-green-300',
+  UPDATE_MEMBER:      'bg-blue-500/20 text-blue-300',
+  DEACTIVATE_MEMBER:  'bg-red-500/20 text-red-300',
+  CREATE_TASK:        'bg-orange-500/20 text-orange-300',
+  UPDATE_TASK:        'bg-yellow-500/20 text-yellow-300',
+  DELETE_TASK:        'bg-rose-500/20 text-rose-300',
+  SUBMIT_TASK:        'bg-purple-500/20 text-purple-300',
   APPROVE_SUBMISSION: 'bg-emerald-500/20 text-emerald-300',
-  REJECT_SUBMISSION: 'bg-pink-500/20 text-pink-300',
-  CREATE_LINK: 'bg-cyan-500/20 text-cyan-300',
-  DELETE_LINK: 'bg-amber-500/20 text-amber-300',
-  CREATE_COHORT: 'bg-teal-500/20 text-teal-300',
-  SEED_MEMBERS: 'bg-indigo-500/20 text-indigo-300',
-  SETUP_TABLES: 'bg-slate-700 text-slate-300',
-  CLEAR_AUDIT_LOGS: 'bg-red-500/20 text-red-300',
-  GENERATE_MOM: 'bg-violet-500/20 text-violet-300',
+  REJECT_SUBMISSION:  'bg-pink-500/20 text-pink-300',
+  CREATE_LINK:        'bg-cyan-500/20 text-cyan-300',
+  DELETE_LINK:        'bg-amber-500/20 text-amber-300',
+  CREATE_COHORT:      'bg-teal-500/20 text-teal-300',
+  SEED_MEMBERS:       'bg-indigo-500/20 text-indigo-300',
+  SETUP_TABLES:       'bg-[#2a2a2a] text-[#aaa]',
+  CLEAR_AUDIT_LOGS:   'bg-red-500/20 text-red-300',
+  GENERATE_MOM:       'bg-violet-500/20 text-violet-300',
 };
 
 export default function AuditLogsClient({ initialLogs }: { initialLogs: AuditLog[] }) {
@@ -70,8 +69,8 @@ export default function AuditLogsClient({ initialLogs }: { initialLogs: AuditLog
     <div className="space-y-6 animate-fadeIn">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-100">Audit Logs</h1>
-          <p className="text-sm text-slate-400 mt-1">{logs.length} logged actions</p>
+          <h1 className="text-2xl font-bold text-[#f0f0f0] uppercase tracking-wide">Audit Logs</h1>
+          <p className="text-sm text-[#666] mt-1 font-mono">{logs.length} logged actions</p>
         </div>
         {logs.length > 0 && (
           <Button variant="outline" className="text-red-400 hover:text-red-300 hover:bg-red-500/10 flex-shrink-0" onClick={() => setShowClear(true)}>
@@ -81,36 +80,36 @@ export default function AuditLogsClient({ initialLogs }: { initialLogs: AuditLog
       </div>
 
       <div className="relative">
-        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#555]" />
         <Input placeholder="Search by action, user, or details..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
       </div>
 
       {filtered.length === 0 ? (
-        <div className="text-center py-16 text-slate-500">
+        <div className="text-center py-16 text-[#555]">
           <FileText size={48} className="mx-auto mb-3 opacity-30" />
-          <p className="font-medium">No logs found</p>
+          <p className="font-bold uppercase tracking-wide">No logs found</p>
         </div>
       ) : (
         <>
           <Card>
             <CardContent className="p-0">
-              <div className="divide-y divide-slate-800">
+              <div className="divide-y divide-[#1e1e1e]">
                 {paginatedItems.map((log, idx) => (
-                  <div key={log.logId} className="px-4 py-3 hover:bg-slate-800/60 transition-colors animate-fadeIn-row" style={{ animationDelay: `${Math.min(idx, 10) * 30}ms` }}>
+                  <div key={log.logId} className="px-4 py-3 hover:bg-[#1a1a1a] transition-colors animate-fadeIn-row" style={{ animationDelay: `${Math.min(idx, 10) * 30}ms` }}>
                     <div className="flex items-start gap-3">
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-wrap items-center gap-2 mb-1">
-                          <Badge className={ACTION_COLORS[log.action] || 'bg-slate-700 text-slate-300'}>
+                          <Badge className={ACTION_COLORS[log.action] || 'bg-[#2a2a2a] text-[#aaa]'}>
                             {log.action.replace(/_/g, ' ')}
                           </Badge>
-                          <span className="text-sm font-medium text-slate-100">{log.performedByName}</span>
-                          <span className="text-xs text-slate-500">{timeAgo(log.timestamp)}</span>
+                          <span className="text-sm font-bold text-[#f0f0f0]">{log.performedByName}</span>
+                          <span className="text-xs text-[#555] font-mono">{timeAgo(log.timestamp)}</span>
                         </div>
-                        <p className="text-sm text-slate-400">{log.details}</p>
-                        <p className="text-xs text-slate-500 mt-1">{formatDateTime(log.timestamp)}</p>
+                        <p className="text-sm text-[#888]">{log.details}</p>
+                        <p className="text-xs text-[#555] mt-1 font-mono">{formatDateTime(log.timestamp)}</p>
                       </div>
-                      <div className="text-xs text-slate-500 flex-shrink-0">
-                        <span className="bg-slate-800 px-2 py-0.5 rounded border border-slate-700">{log.targetType}</span>
+                      <div className="text-xs text-[#555] flex-shrink-0">
+                        <span className="bg-[#1a1a1a] px-2 py-0.5 border border-[#2d2d2d] font-mono">{log.targetType}</span>
                       </div>
                     </div>
                   </div>

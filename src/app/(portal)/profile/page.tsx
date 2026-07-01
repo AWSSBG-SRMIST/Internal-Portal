@@ -32,29 +32,29 @@ export default async function ProfilePage() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 animate-fadeIn">
-      <h1 className="text-2xl font-bold text-slate-100">My Profile</h1>
+      <h1 className="text-2xl font-bold text-[#f0f0f0] uppercase tracking-wide">My Profile</h1>
 
       <Card>
         <CardContent className="p-6">
           <div className="flex items-start gap-4">
             <div className="flex-1 min-w-0">
-              <h2 className="text-xl font-bold text-slate-100 truncate">{user.name}</h2>
+              <h2 className="text-xl font-bold text-[#f0f0f0] truncate uppercase tracking-wide">{user.name}</h2>
               <div className="flex flex-wrap gap-2 mt-2">
                 <Badge className={getRoleColor(user.role, user.domain)}>{formatRole(user.role, user.domain)}</Badge>
                 {user.domain && user.role !== 'DIRECTOR' && <Badge className={getDomainColor(user.domain)}>{user.domain}</Badge>}
                 {user.subdomain && <Badge className={getSubdomainColor(user.subdomain)}>{user.subdomain}</Badge>}
               </div>
-              <div className="flex items-center gap-2 mt-3 text-sm text-slate-400">
-                <Mail size={14} className="text-slate-500" />
-                <span>{user.email}</span>
+              <div className="flex items-center gap-2 mt-3 text-sm text-[#888]">
+                <Mail size={14} className="text-[#555]" />
+                <span className="font-mono">{user.email}</span>
               </div>
             </div>
             {!presidium && (
               <div className="text-right flex-shrink-0">
-                <div className={`text-3xl font-bold ${getStarColor(member?.totalStars || 0)}`}>
+                <div className={`text-3xl font-bold font-mono ${getStarColor(member?.totalStars || 0)}`}>
                   {(member?.totalStars || 0) > 0 ? '+' : ''}{member?.totalStars || 0}
                 </div>
-                <div className="text-xs text-slate-500 mt-1">Stars</div>
+                <div className="text-xs text-[#555] mt-1 uppercase tracking-wide">Stars</div>
               </div>
             )}
           </div>
@@ -66,11 +66,11 @@ export default async function ProfilePage() {
           <Card>
             <CardHeader><CardTitle className="text-base">Personal Details</CardTitle></CardHeader>
             <CardContent className="space-y-3 text-sm">
-              {member.clubId && <div className="flex items-baseline justify-between gap-4"><span className="text-slate-400 flex-shrink-0">Club ID</span><span className="font-medium text-slate-200 text-right break-all">{member.clubId}</span></div>}
-              {member.regNo && <div className="flex items-baseline justify-between gap-4"><span className="text-slate-400 flex-shrink-0">Reg. No.</span><span className="font-medium text-slate-200 text-right">{member.regNo}</span></div>}
-              {member.department && <div className="flex items-baseline justify-between gap-4"><span className="text-slate-400 flex-shrink-0">Department</span><span className="font-medium text-slate-200 text-right">{member.department}</span></div>}
-              {member.builderId && <div className="flex items-baseline justify-between gap-4"><span className="text-slate-400 flex-shrink-0">Builder ID</span><span className="font-medium text-slate-200 text-right break-all">{member.builderId}</span></div>}
-              {member.joinedAt && <div className="flex items-baseline justify-between gap-4"><span className="text-slate-400 flex-shrink-0">Joined</span><span className="font-medium text-slate-200 text-right">{formatDate(member.joinedAt)}</span></div>}
+              {member.clubId && <div className="flex items-baseline justify-between gap-4"><span className="text-[#888] flex-shrink-0">Club ID</span><span className="font-bold text-[#e0e0e0] text-right break-all font-mono">{member.clubId}</span></div>}
+              {member.regNo && <div className="flex items-baseline justify-between gap-4"><span className="text-[#888] flex-shrink-0">Reg. No.</span><span className="font-bold text-[#e0e0e0] text-right font-mono">{member.regNo}</span></div>}
+              {member.department && <div className="flex items-baseline justify-between gap-4"><span className="text-[#888] flex-shrink-0">Department</span><span className="font-bold text-[#e0e0e0] text-right">{member.department}</span></div>}
+              {member.builderId && <div className="flex items-baseline justify-between gap-4"><span className="text-[#888] flex-shrink-0">Builder ID</span><span className="font-bold text-[#e0e0e0] text-right break-all font-mono">{member.builderId}</span></div>}
+              {member.joinedAt && <div className="flex items-baseline justify-between gap-4"><span className="text-[#888] flex-shrink-0">Joined</span><span className="font-bold text-[#e0e0e0] text-right font-mono">{formatDate(member.joinedAt)}</span></div>}
             </CardContent>
           </Card>
 
@@ -86,14 +86,14 @@ export default async function ProfilePage() {
                       { label: 'Rejected', value: rating.rejectedCount || 0, color: 'text-red-400' },
                       { label: 'Pending', value: rating.pendingCount || 0, color: 'text-yellow-400' },
                     ].map(s => (
-                      <div key={s.label} className="bg-slate-800 rounded-xl p-3 text-center">
-                        <div className={`text-xl font-bold ${s.color}`}>{s.value}</div>
-                        <div className="text-xs text-slate-400 mt-1">{s.label}</div>
+                      <div key={s.label} className="bg-[#1a1a1a] border border-[#2d2d2d] p-3 text-center">
+                        <div className={`text-xl font-bold font-mono ${s.color}`}>{s.value}</div>
+                        <div className="text-xs text-[#666] mt-1 uppercase tracking-wide">{s.label}</div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-center text-slate-500 text-sm py-4">No submission history yet</p>
+                  <p className="text-center text-[#555] text-sm py-4">No submission history yet</p>
                 )}
               </CardContent>
             </Card>
@@ -106,15 +106,15 @@ export default async function ProfilePage() {
           <CardHeader><CardTitle className="text-base">Recent Submissions</CardTitle></CardHeader>
           <CardContent>
             {recentSubs.length === 0 ? (
-              <p className="text-center text-slate-500 text-sm py-4">No submissions yet</p>
+              <p className="text-center text-[#555] text-sm py-4">No submissions yet</p>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {recentSubs.map((sub: any) => (
-                  <div key={sub.submissionId} className="flex items-center gap-3 p-3 border border-slate-800 rounded-lg">
-                    <div className={`w-2 h-2 rounded-full ${sub.reviewStatus === 'APPROVED' ? 'bg-green-400' : sub.reviewStatus === 'REJECTED' ? 'bg-red-400' : sub.reviewStatus === 'REVISION_REQUESTED' ? 'bg-orange-400' : 'bg-yellow-400'}`} />
+                  <div key={sub.submissionId} className="flex items-center gap-3 p-3 border border-[#1e1e1e]">
+                    <div className={`w-2 h-2 flex-shrink-0 ${sub.reviewStatus === 'APPROVED' ? 'bg-green-400' : sub.reviewStatus === 'REJECTED' ? 'bg-red-400' : sub.reviewStatus === 'REVISION_REQUESTED' ? 'bg-orange-400' : 'bg-yellow-400'}`} />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-slate-100 truncate">{sub.taskTitle}</p>
-                      <p className="text-xs text-slate-500">{formatDateTime(sub.submittedAt)} · {getSubmissionTimingLabel(sub.submittedAt, sub.deadline)}</p>
+                      <p className="text-sm font-medium text-[#f0f0f0] truncate">{sub.taskTitle}</p>
+                      <p className="text-xs text-[#555] font-mono">{formatDateTime(sub.submittedAt)} · {getSubmissionTimingLabel(sub.submittedAt, sub.deadline)}</p>
                     </div>
                     <div className="flex items-center gap-2">
                       {sub.ratingAwarded != null && (

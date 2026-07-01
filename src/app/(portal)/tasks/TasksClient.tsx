@@ -16,19 +16,19 @@ const PAGE_SIZE = 10;
 function TaskCard({ task, index = 0 }: { task: Task; index?: number }) {
   const overdue = isDeadlinePassed(task.deadline);
   const dueLabel = overdue ? 'Overdue' : 'Due';
-  const statusColor = task.status === 'OPEN'
-    ? (overdue ? 'bg-red-500/10 border-red-500/30' : 'bg-slate-900 border-slate-700')
-    : 'bg-slate-800 border-slate-700';
+  const statusBorder = task.status === 'OPEN'
+    ? (overdue ? 'border-red-500/40 bg-red-500/5' : 'border-[#2d2d2d] bg-[#111]')
+    : 'border-[#1e1e1e] bg-[#0d0d0d]';
 
   return (
     <Link href={`/tasks/${task.taskId}`}>
       <div
-        className={`border rounded-xl p-4 hover:border-slate-600 transition-all cursor-pointer animate-fadeIn ${statusColor}`}
+        className={`border-2 p-4 hover:border-[#FF9900] transition-all cursor-pointer animate-fadeIn ${statusBorder}`}
         style={{ animationDelay: `${Math.min(index, 10) * 30}ms` }}
       >
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
               <Badge variant={task.status === 'OPEN' ? (overdue ? 'destructive' : 'default') : 'secondary'} className="text-xs">
                 {task.status === 'OPEN' ? (overdue ? 'Overdue' : 'Open') : 'Closed'}
               </Badge>
@@ -36,20 +36,20 @@ function TaskCard({ task, index = 0 }: { task: Task; index?: number }) {
               {task.domain && <Badge className={`${getDomainColor(task.domain)} text-xs`}>{task.domain}</Badge>}
               {task.priority && <Badge className={`${getPriorityColor(task.priority)} text-xs`}>{task.priority}</Badge>}
             </div>
-            <h3 className="font-semibold text-slate-100 truncate">{task.title}</h3>
-            <p className="text-sm text-slate-400 mt-1 line-clamp-2">{task.description}</p>
+            <h3 className="font-bold text-[#f0f0f0] truncate uppercase tracking-wide text-sm mt-2">{task.title}</h3>
+            <p className="text-sm text-[#888] mt-1 line-clamp-2">{task.description}</p>
           </div>
           <div className="text-right flex-shrink-0">
-            <p className="text-xs text-slate-500">{task.totalSubmissions} submissions</p>
+            <p className="text-xs text-[#555] font-mono">{task.totalSubmissions} sub</p>
           </div>
         </div>
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 mt-3 pt-3 border-t border-slate-800">
-          <p className="text-xs text-slate-400">
-            Assigned to: <span className="font-medium text-slate-300">{task.assignedToName}</span>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 mt-3 pt-3 border-t border-[#1e1e1e]">
+          <p className="text-xs text-[#888]">
+            → <span className="font-bold text-[#d0d0d0]">{task.assignedToName}</span>
           </p>
-          <div className="flex items-center gap-1 text-xs text-slate-400">
-            <Clock size={12} className={overdue ? 'text-red-400' : 'text-slate-500'} />
-            <span className={overdue ? 'text-red-400 font-medium' : ''}>
+          <div className="flex items-center gap-1 text-xs text-[#888] font-mono">
+            <Clock size={12} className={overdue ? 'text-red-400' : 'text-[#555]'} />
+            <span className={overdue ? 'text-red-400 font-bold' : ''}>
               {dueLabel}: {formatDateTime(task.deadline)}
             </span>
           </div>
@@ -64,10 +64,10 @@ function TaskSection({ title, tasks, dimmed }: { title: string; tasks: Task[]; d
   if (tasks.length === 0) return null;
   return (
     <div>
-      <h2 className={`text-sm font-semibold uppercase tracking-wider mb-3 ${dimmed ? 'text-slate-500' : 'text-slate-400'}`}>
+      <h2 className={`text-xs font-bold uppercase tracking-widest mb-3 border-l-2 pl-3 ${dimmed ? 'text-[#555] border-[#333]' : 'text-[#888] border-[#FF9900]'}`}>
         {title} ({tasks.length})
       </h2>
-      <div className={`grid gap-3 ${dimmed ? 'opacity-75' : ''}`}>
+      <div className={`grid gap-2 ${dimmed ? 'opacity-60' : ''}`}>
         {paginatedItems.map((task, i) => <TaskCard key={task.taskId} task={task} index={i} />)}
       </div>
       <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
@@ -96,8 +96,8 @@ export default function TasksClient({ initialTasks }: { initialTasks: Task[] }) 
     <div className="space-y-6 animate-fadeIn">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-100">Tasks</h1>
-          <p className="text-sm text-slate-400 mt-1">{initialTasks.length} total tasks</p>
+          <h1 className="text-2xl font-bold text-[#f0f0f0] uppercase tracking-wide">Tasks</h1>
+          <p className="text-sm text-[#666] mt-1 font-mono">{initialTasks.length} total tasks</p>
         </div>
         <Link href="/tasks/new">
           <Button><Plus size={16} /> New Task</Button>
@@ -107,7 +107,7 @@ export default function TasksClient({ initialTasks }: { initialTasks: Task[] }) 
       {/* Filters */}
       <div className="flex flex-wrap gap-3">
         <div className="relative flex-1 min-w-48">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#555]" />
           <Input
             placeholder="Search tasks..."
             value={search}
@@ -155,9 +155,9 @@ export default function TasksClient({ initialTasks }: { initialTasks: Task[] }) 
       </div>
 
       {filtered.length === 0 ? (
-        <div className="text-center py-16 text-slate-500">
+        <div className="text-center py-16 text-[#555]">
           <CheckSquare size={48} className="mx-auto mb-3 opacity-30" />
-          <p className="font-medium">No tasks found</p>
+          <p className="font-bold uppercase tracking-wide">No tasks found</p>
           <p className="text-sm mt-1">Try adjusting your filters or create a new task</p>
           <Link href="/tasks/new">
             <Button className="mt-4" variant="outline"><Plus size={14} /> Create Task</Button>

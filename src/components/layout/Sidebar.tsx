@@ -16,8 +16,6 @@ interface NavItem {
   href: string;
   icon: React.ReactNode;
   roles?: string[];
-  // For access rules that aren't a flat role list (e.g. "any domain's
-  // Manager, plus HR & Admin's whole team"). Takes priority over `roles`.
   visible?: (user: SessionUser) => boolean;
 }
 
@@ -38,14 +36,14 @@ function NavPanel({ user, visibleItems, pathname, onNavigate, onLogout }: {
   return (
     <div className="flex flex-col h-full">
       {/* Logo */}
-      <div className="p-5 border-b border-white/10">
+      <div className="p-5 border-b-2 border-[#2d2d2d]">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg overflow-hidden flex-shrink-0 bg-slate-800">
+          <div className="w-9 h-9 overflow-hidden flex-shrink-0 bg-[#1a1a1a] border-2 border-[#2d2d2d]">
             <Image src="/logo.png" alt="AWSSBG Logo" width={36} height={36} className="object-contain" />
           </div>
           <div>
-            <p className="text-white font-bold text-sm leading-tight">Internal Dashboard</p>
-            <p className="text-slate-400 text-xs">@AWSSBG · SRMIST</p>
+            <p className="text-white font-bold text-sm leading-tight tracking-wide uppercase">Internal Dashboard</p>
+            <p className="text-[#f0f0f0] text-xs font-mono">@AWSSBG · SRMIST</p>
           </div>
         </div>
       </div>
@@ -59,12 +57,9 @@ function NavPanel({ user, visibleItems, pathname, onNavigate, onLogout }: {
               key={item.href}
               href={item.href}
               onClick={onNavigate}
-              className={cn(
-                'sidebar-link',
-                isActive && 'active'
-              )}
+              className={cn('sidebar-link', isActive && 'active')}
             >
-              <span className={cn(isActive ? 'text-orange-400' : 'text-slate-500')}>
+              <span className={cn(isActive ? 'text-black' : 'text-[#555]')}>
                 {item.icon}
               </span>
               {item.label}
@@ -74,19 +69,19 @@ function NavPanel({ user, visibleItems, pathname, onNavigate, onLogout }: {
       </nav>
 
       {/* User */}
-      <div className="p-3 border-t border-white/10">
-        <div className="flex items-center gap-3 px-3 py-2 rounded-lg">
+      <div className="p-3 border-t-2 border-[#2d2d2d]">
+        <div className="flex items-center gap-3 px-3 py-2">
           <div className="flex-1 min-w-0">
-            <p className="text-white text-xs font-medium truncate">{user.name}</p>
-            <p className="text-slate-400 text-xs truncate">{formatRole(user.role, user.domain)}</p>
+            <p className="text-white text-xs font-bold uppercase truncate">{user.name}</p>
+            <p className="text-[#555] text-xs font-mono truncate">{formatRole(user.role, user.domain)}</p>
           </div>
         </div>
         <button
           onClick={onLogout}
-          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all mt-1"
+          className="w-full flex items-center justify-center gap-2 px-3 py-2.5 mt-2 text-xs font-mono font-bold uppercase tracking-widest text-[#888] border-2 border-[#2d2d2d] hover:text-[#ff4444] hover:border-[#ff4444] hover:bg-[#1a0000] transition-all"
         >
-          <LogOut size={16} />
-          Sign out
+          <LogOut size={14} />
+          Sign Out
         </button>
       </div>
     </div>
@@ -113,47 +108,52 @@ export function Sidebar({ user, children }: SidebarProps) {
   }
 
   return (
-    <div className="flex h-dvh w-full bg-slate-950 overflow-hidden overscroll-none">
+    <div className="flex h-dvh w-full bg-[#050505] overflow-hidden overscroll-none">
       {/* Mobile overlay */}
       {mobileOpen && (
         <div
-          className="lg:hidden fixed inset-0 z-40 bg-black/50"
+          className="lg:hidden fixed inset-0 z-40 bg-black/70"
           onClick={closeMobile}
         />
       )}
 
       {/* Mobile drawer */}
       <aside className={cn(
-        'lg:hidden fixed top-0 left-0 h-dvh w-72 bg-slate-900 z-50 transform transition-transform duration-300 shadow-2xl',
+        'lg:hidden fixed top-0 left-0 h-dvh w-72 bg-black border-r-2 border-[#2d2d2d] z-50 transform transition-transform duration-300',
         mobileOpen ? 'translate-x-0' : '-translate-x-full'
       )}>
         <NavPanel user={user} visibleItems={visibleItems} pathname={pathname} onNavigate={closeMobile} onLogout={handleLogout} />
       </aside>
 
       {/* Desktop sidebar */}
-      <aside className="hidden lg:flex flex-col w-64 bg-slate-900 h-full flex-shrink-0">
+      <aside className="hidden lg:flex flex-col w-64 bg-black border-r-2 border-[#2d2d2d] h-full flex-shrink-0">
         <NavPanel user={user} visibleItems={visibleItems} pathname={pathname} onNavigate={closeMobile} onLogout={handleLogout} />
       </aside>
 
       <div className="flex-1 flex flex-col h-full overflow-hidden min-w-0">
-        {/* Mobile top bar — takes its own flow space, so main content never needs a padding hack to clear it */}
-        <header className="lg:hidden h-14 flex items-center gap-3 px-3 border-b border-slate-800 bg-slate-900 flex-shrink-0">
+        {/* Mobile top bar */}
+        <header className="lg:hidden h-14 flex items-center gap-3 px-3 border-b-2 border-[#2d2d2d] bg-black flex-shrink-0">
           <button
             onClick={() => setMobileOpen(o => !o)}
             aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
-            className="w-11 h-11 flex items-center justify-center rounded-lg bg-slate-800 text-white flex-shrink-0"
+            className="w-11 h-11 flex items-center justify-center bg-[#1a1a1a] border-2 border-[#2d2d2d] text-white flex-shrink-0 hover:border-[#FF9900] transition-colors"
           >
             {mobileOpen ? <X size={18} /> : <Menu size={18} />}
           </button>
-          <div className="w-7 h-7 rounded-lg overflow-hidden flex-shrink-0 bg-slate-800">
+          <div className="w-7 h-7 overflow-hidden flex-shrink-0 bg-[#1a1a1a] border border-[#333]">
             <Image src="/logo.png" alt="AWSSBG Logo" width={28} height={28} className="object-contain" />
           </div>
-          <p className="text-white font-bold text-sm truncate">Internal Dashboard</p>
+          <p className="text-white font-bold text-sm truncate uppercase tracking-wide">Internal Dashboard</p>
         </header>
 
         <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 lg:p-6 min-w-0 overscroll-contain">
           {children}
         </main>
+        <footer className="flex-shrink-0 border-t border-[#1e1e1e] px-4 lg:px-6 py-2.5 bg-[#050505]">
+          <p className="text-[10px] text-[#555] font-mono text-center tracking-wide">
+            Made with ♥ by Tech Team for AWS SBG at SRMIST &nbsp;·&nbsp; Strictly for internal use only.
+          </p>
+        </footer>
       </div>
     </div>
   );

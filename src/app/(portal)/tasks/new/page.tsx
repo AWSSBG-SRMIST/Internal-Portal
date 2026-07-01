@@ -20,7 +20,6 @@ const ALL_DOMAINS: Domain[] = ['Technical', 'Corporate', 'Creatives'];
 const HOURS = Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0'));
 const MINUTES = ['00', '15', '30', '45'];
 
-// Scopes available per role
 function getAvailableScopes(me: SessionUser): { value: TaskAssignmentScope; label: string; description: string }[] {
   if (me.role === 'SBG_LEADER' || me.role === 'SECRETARY') return [
     { value: 'ORG_WIDE',        label: 'Org-wide',       description: 'Assign to every member of the club' },
@@ -41,7 +40,6 @@ function getAvailableScopes(me: SessionUser): { value: TaskAssignmentScope; labe
   return [];
 }
 
-// Scopes where collective mode is meaningful
 const COLLECTIVE_ELIGIBLE: TaskAssignmentScope[] = [
   'ORG_WIDE', 'ALL_DIRECTORS', 'DOMAIN_WIDE', 'SUBDOMAIN_LEADERSHIP', 'SUBDOMAIN_WIDE', 'BUILDERS_ONLY',
 ];
@@ -55,7 +53,6 @@ export default function NewTaskPage() {
   const [scope, setScope] = useState<TaskAssignmentScope | ''>('');
   const [submissionMode, setSubmissionMode] = useState<SubmissionMode>('INDIVIDUAL');
   const [assignedToId, setAssignedToId] = useState('');
-  // For Director → Subdomain Leadership
   const [leadershipSubdomain, setLeadershipSubdomain] = useState<Subdomain | ''>('');
   const [form, setForm] = useState({ title: '', description: '', deadline: '', priority: 'MEDIUM' });
 
@@ -95,10 +92,8 @@ export default function NewTaskPage() {
   const availableScopes = me ? getAvailableScopes(me) : [];
   const showCollectiveToggle = COLLECTIVE_ELIGIBLE.includes(scope as TaskAssignmentScope);
 
-  // Director picker (Presidium → SINGLE_DIRECTOR)
   const directors = members.filter(m => m.role === 'DIRECTOR' && m.isActive !== false);
 
-  // Individual picker (Manager → INDIVIDUAL): Associates + Builders in their subdomain, not themselves
   const individualTargets = me ? members.filter(m =>
     m.isActive !== false &&
     m.domain === me.domain &&
@@ -107,7 +102,6 @@ export default function NewTaskPage() {
     m.memberId !== me.memberId
   ) : [];
 
-  // Subdomain list for Director → SUBDOMAIN_LEADERSHIP
   const directorSubdomains = me?.role === 'DIRECTOR' && me.domain
     ? (DOMAIN_SUBDOMAINS[me.domain as keyof typeof DOMAIN_SUBDOMAINS] || [])
     : [];
@@ -157,7 +151,6 @@ export default function NewTaskPage() {
         subdomain: null,
       };
 
-      // Attach domain/subdomain where needed (server also validates, this is for clarity)
       if (scope === 'DOMAIN_WIDE') { payload.domain = me?.domain; }
       if (scope === 'SUBDOMAIN_LEADERSHIP') { payload.domain = me?.domain; payload.subdomain = leadershipSubdomain; }
       if (scope === 'SUBDOMAIN_WIDE') { payload.domain = me?.domain; payload.subdomain = me?.subdomain; }
@@ -184,26 +177,24 @@ export default function NewTaskPage() {
   now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
   const minDate = now.toISOString().slice(0, 10);
 
-  if (!me) return <div className="flex justify-center py-16"><Loader2 size={32} className="animate-spin text-orange-500" /></div>;
+  if (!me) return <div className="flex justify-center py-16"><Loader2 size={32} className="animate-spin text-[#FF9900]" /></div>;
 
   if (!canCreateTask(me) || availableScopes.length === 0) {
     return (
-      <div className="max-w-2xl mx-auto py-16 text-center text-slate-400">
-        <p>You are not authorized to create tasks.</p>
-        <Link href="/tasks" className="text-sm text-orange-500 hover:text-orange-400 mt-2 inline-block">Back to tasks →</Link>
+      <div className="max-w-2xl mx-auto py-16 text-center text-[#666]">
+        <p className="font-mono uppercase tracking-wide">You are not authorized to create tasks.</p>
+        <Link href="/tasks" className="text-sm text-[#FF9900] hover:text-orange-300 mt-2 inline-block">Back to tasks →</Link>
       </div>
     );
   }
-
-  const selectedScopeInfo = availableScopes.find(s => s.value === scope);
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 animate-fadeIn">
       <div className="flex items-center gap-4">
         <Link href="/tasks"><Button variant="ghost" size="icon"><ArrowLeft size={18} /></Button></Link>
         <div>
-          <h1 className="text-2xl font-bold text-slate-100">Create Task</h1>
-          <p className="text-sm text-slate-400">Assign work according to your hierarchy level</p>
+          <h1 className="text-2xl font-bold text-[#f0f0f0] uppercase tracking-wide">Create Task</h1>
+          <p className="text-sm text-[#666] font-mono">Assign work according to your hierarchy level</p>
         </div>
       </div>
 
@@ -234,7 +225,7 @@ export default function NewTaskPage() {
                     <SelectTrigger className="w-[60px]"><SelectValue /></SelectTrigger>
                     <SelectContent>{HOURS.map(h => <SelectItem key={h} value={h}>{h}</SelectItem>)}</SelectContent>
                   </Select>
-                  <span className="text-slate-500 font-semibold">:</span>
+                  <span className="text-[#555] font-bold">:</span>
                   <Select value={deadlineMinute} onValueChange={setDeadlineMinute}>
                     <SelectTrigger className="w-[60px]"><SelectValue /></SelectTrigger>
                     <SelectContent>{MINUTES.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
@@ -249,7 +240,7 @@ export default function NewTaskPage() {
                 </div>
               </div>
               {form.deadline && (
-                <p className="text-xs text-slate-500 flex items-center gap-1.5">
+                <p className="text-xs text-[#555] flex items-center gap-1.5 font-mono">
                   <CalendarClock size={12} className="flex-shrink-0" />Due {formatDateTime(form.deadline)}
                 </p>
               )}
@@ -272,13 +263,12 @@ export default function NewTaskPage() {
         <Card>
           <CardHeader><CardTitle className="text-base">Assignment</CardTitle></CardHeader>
           <CardContent className="space-y-4">
-            {/* Scope selector */}
             <div className="space-y-2">
               <Label>Assign To *</Label>
               {availableScopes.length === 1 ? (
-                <div className="rounded-lg border border-slate-700 bg-slate-800/60 p-3">
-                  <p className="text-sm font-medium text-slate-200">{availableScopes[0].label}</p>
-                  <p className="text-xs text-slate-400 mt-0.5">{availableScopes[0].description}</p>
+                <div className="border border-[#2d2d2d] bg-[#1a1a1a] p-3">
+                  <p className="text-sm font-bold text-[#e0e0e0] uppercase tracking-wide">{availableScopes[0].label}</p>
+                  <p className="text-xs text-[#888] mt-0.5">{availableScopes[0].description}</p>
                 </div>
               ) : (
                 <div className="grid gap-2">
@@ -287,21 +277,20 @@ export default function NewTaskPage() {
                       key={s.value}
                       type="button"
                       onClick={() => { setScope(s.value); setAssignedToId(''); setLeadershipSubdomain(''); }}
-                      className={`text-left rounded-lg border p-3 transition-colors ${
+                      className={`text-left border-2 p-3 transition-colors ${
                         scope === s.value
-                          ? 'border-orange-500/60 bg-orange-500/10'
-                          : 'border-slate-700 hover:border-slate-600'
+                          ? 'border-[#FF9900] bg-[#FF9900]/10'
+                          : 'border-[#2d2d2d] hover:border-[#555]'
                       }`}
                     >
-                      <p className="text-sm font-medium text-slate-200">{s.label}</p>
-                      <p className="text-xs text-slate-400 mt-0.5">{s.description}</p>
+                      <p className="text-sm font-bold text-[#e0e0e0] uppercase tracking-wide">{s.label}</p>
+                      <p className="text-xs text-[#888] mt-0.5">{s.description}</p>
                     </button>
                   ))}
                 </div>
               )}
             </div>
 
-            {/* Target picker for SINGLE_DIRECTOR */}
             {scope === 'SINGLE_DIRECTOR' && (
               <div className="space-y-2">
                 <Label>Select Director *</Label>
@@ -318,7 +307,6 @@ export default function NewTaskPage() {
               </div>
             )}
 
-            {/* Subdomain picker for SUBDOMAIN_LEADERSHIP */}
             {scope === 'SUBDOMAIN_LEADERSHIP' && (
               <div className="space-y-2">
                 <Label>Select Subdomain *</Label>
@@ -330,11 +318,10 @@ export default function NewTaskPage() {
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-slate-500">Manager + Associates of this subdomain will be assigned — no Builders.</p>
+                <p className="text-xs text-[#555] font-mono">Manager + Associates of this subdomain will be assigned — no Builders.</p>
               </div>
             )}
 
-            {/* Member picker for INDIVIDUAL */}
             {scope === 'INDIVIDUAL' && (
               <div className="space-y-2">
                 <Label>Select Member *</Label>
@@ -351,7 +338,6 @@ export default function NewTaskPage() {
               </div>
             )}
 
-            {/* Submission mode toggle (only for group scopes) */}
             {showCollectiveToggle && (
               <div className="space-y-2">
                 <Label>Submission Mode</Label>
@@ -359,42 +345,42 @@ export default function NewTaskPage() {
                   <button
                     type="button"
                     onClick={() => setSubmissionMode('INDIVIDUAL')}
-                    className={`rounded-lg border p-3 text-left transition-colors ${
+                    className={`border-2 p-3 text-left transition-colors ${
                       submissionMode === 'INDIVIDUAL'
-                        ? 'border-orange-500/60 bg-orange-500/10'
-                        : 'border-slate-700 hover:border-slate-600'
+                        ? 'border-[#FF9900] bg-[#FF9900]/10'
+                        : 'border-[#2d2d2d] hover:border-[#555]'
                     }`}
                   >
                     <div className="flex items-center gap-2 mb-1">
-                      <Users size={14} className="text-slate-400" />
-                      <span className="text-sm font-medium text-slate-200">Individual</span>
+                      <Users size={14} className="text-[#888]" />
+                      <span className="text-sm font-bold text-[#e0e0e0] uppercase tracking-wide">Individual</span>
                     </div>
-                    <p className="text-xs text-slate-400">Everyone submits their own work</p>
+                    <p className="text-xs text-[#888]">Everyone submits their own work</p>
                   </button>
                   <button
                     type="button"
                     onClick={() => setSubmissionMode('COLLECTIVE')}
-                    className={`rounded-lg border p-3 text-left transition-colors ${
+                    className={`border-2 p-3 text-left transition-colors ${
                       submissionMode === 'COLLECTIVE'
-                        ? 'border-orange-500/60 bg-orange-500/10'
-                        : 'border-slate-700 hover:border-slate-600'
+                        ? 'border-[#FF9900] bg-[#FF9900]/10'
+                        : 'border-[#2d2d2d] hover:border-[#555]'
                     }`}
                   >
                     <div className="flex items-center gap-2 mb-1">
-                      <User size={14} className="text-slate-400" />
-                      <span className="text-sm font-medium text-slate-200">Collective</span>
+                      <User size={14} className="text-[#888]" />
+                      <span className="text-sm font-bold text-[#e0e0e0] uppercase tracking-wide">Collective</span>
                     </div>
-                    <p className="text-xs text-slate-400">First approved submission closes the task</p>
+                    <p className="text-xs text-[#888]">First approved submission closes the task</p>
                   </button>
                 </div>
               </div>
             )}
 
             {/* Preview */}
-            <div className="bg-orange-500/10 border border-orange-500/30 rounded-lg p-3 flex items-start gap-2">
-              <Info size={16} className="text-orange-400 mt-0.5 flex-shrink-0" />
-              <div className="text-sm text-orange-300 space-y-0.5">
-                <div><span className="font-medium">Assigned to: </span>
+            <div className="bg-[#FF9900]/10 border border-[#FF9900]/30 p-3 flex items-start gap-2">
+              <Info size={16} className="text-[#FF9900] mt-0.5 flex-shrink-0" />
+              <div className="text-sm text-orange-300 space-y-0.5 font-mono">
+                <div><span className="font-bold">Assigned to: </span>
                   <Badge variant="default" className="mx-1 text-xs">{getPreviewText()}</Badge>
                 </div>
                 {showCollectiveToggle && (
@@ -412,14 +398,14 @@ export default function NewTaskPage() {
         {/* Rating guide */}
         <Card className="bg-blue-500/10 border-blue-500/30">
           <CardContent className="p-4">
-            <h3 className="text-sm font-semibold text-blue-300 mb-2">Rating System</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-blue-400">
+            <h3 className="text-sm font-bold text-blue-300 mb-2 uppercase tracking-wide">Rating System</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-blue-400 font-mono">
               <div className="flex items-center gap-2"><span className="font-bold text-green-400 flex-shrink-0">+2⭐</span><span>Submitted &gt;24h before deadline</span></div>
               <div className="flex items-center gap-2"><span className="font-bold text-blue-400 flex-shrink-0">+1⭐</span><span>Submitted within last 24h before</span></div>
-              <div className="flex items-center gap-2"><span className="font-bold text-slate-400 flex-shrink-0">+0⭐</span><span>Submitted within 24h after deadline</span></div>
+              <div className="flex items-center gap-2"><span className="font-bold text-[#888] flex-shrink-0">+0⭐</span><span>Submitted within 24h after deadline</span></div>
               <div className="flex items-center gap-2"><span className="font-bold text-red-400 flex-shrink-0">-1⭐</span><span>Submitted more than 24h after</span></div>
             </div>
-            <p className="text-xs text-blue-500 mt-2">Priority multiplier: LOW×1 · MEDIUM×1.5 · HIGH×2</p>
+            <p className="text-xs text-blue-500 mt-2 font-mono">Priority: LOW×1 · MEDIUM×1.5 · HIGH×2</p>
           </CardContent>
         </Card>
 

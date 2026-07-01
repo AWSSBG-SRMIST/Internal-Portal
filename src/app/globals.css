@@ -2,16 +2,12 @@
 @import "tw-animate-css";
 
 :root {
-  --background: #020617;
-  --foreground: #e2e8f0;
+  --background: #050505;
+  --foreground: #f0f0f0;
 }
 
 html, body {
   height: 100%;
-  /* The app shell (Sidebar) manages all scrolling internally via its own
-     overflow-y-auto <main>. Locking scroll here prevents a second, outer
-     body-level scrollbar from ever appearing if any descendant's height
-     measurement is off by even a pixel (e.g. mobile 100vh/toolbar quirks). */
   overflow: hidden;
   overscroll-behavior: none;
 }
@@ -19,7 +15,7 @@ html, body {
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   cursor: url('/cursors/default.png') 0 0, auto;
@@ -29,55 +25,40 @@ body {
   box-sizing: border-box;
 }
 
-/* Custom hand cursor on anything clickable — covers links, buttons, Radix
-   Select triggers/options, checkboxes/radios, and the .cursor-pointer
-   utility used for non-semantic clickable cards (e.g. leaderboard podium). */
 a, button, label, select, .cursor-pointer,
 [role="button"], [role="option"], [role="combobox"], [role="menuitem"], [role="tab"],
 input[type="checkbox"], input[type="radio"], input[type="submit"], input[type="button"] {
   cursor: url('/cursors/pointer.png') 5 0, pointer;
 }
 
-/* Text inputs keep the native text-beam cursor — the global custom cursor
-   above would otherwise cascade in and make text fields feel unclickable. */
 input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]),
 textarea {
   cursor: text;
 }
 
-/* Chrome/Edge/Safari/Brave all force a light yellow background + black text
-   on autofilled inputs, ignoring our own styling entirely. The only
-   reliable override is this inset box-shadow trick (paints over the
-   autofill highlight) plus -webkit-text-fill-color (the actual text color
-   property autofill respects, since `color` itself gets ignored). Matches
-   the input component's bg-slate-800 / text-slate-100. */
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
 input:-webkit-autofill:focus,
 input:-webkit-autofill:active {
-  -webkit-text-fill-color: #f1f5f9;
-  caret-color: #f1f5f9;
-  box-shadow: 0 0 0px 1000px #1e293b inset;
-  -webkit-box-shadow: 0 0 0px 1000px #1e293b inset;
+  -webkit-text-fill-color: #f0f0f0;
+  caret-color: #f0f0f0;
+  box-shadow: 0 0 0px 1000px #1a1a1a inset;
+  -webkit-box-shadow: 0 0 0px 1000px #1a1a1a inset;
   transition: background-color 5000s ease-in-out 0s;
 }
 
-/* Smooth momentum scrolling on iOS */
 .overflow-y-auto, .overflow-x-auto {
   -webkit-overflow-scrolling: touch;
 }
 
-/* Custom scrollbar — slim, dark-themed, brightens to the brand orange on
-   hover. Applied globally so every scrollable container (sidebar nav,
-   tables, dialogs) matches without per-element opt-in. */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #475569 transparent;
+  scrollbar-color: #333 transparent;
 }
 
 *::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 *::-webkit-scrollbar-track {
@@ -85,67 +66,110 @@ input:-webkit-autofill:active {
 }
 
 *::-webkit-scrollbar-thumb {
-  background-color: #475569;
-  border-radius: 9999px;
+  background-color: #333;
+  border-radius: 0;
 }
 
 *::-webkit-scrollbar-thumb:hover {
   background-color: #FF9900;
 }
 
+/* ─── Sidebar ──────────────────────────────────── */
 .sidebar-link {
-  @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 text-slate-400 hover:text-white hover:bg-white/10;
+  @apply flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition-colors text-[#666] hover:text-white hover:bg-[#1a1a1a];
 }
 
 .sidebar-link.active {
-  @apply text-white bg-orange-500/20 border border-orange-500/30;
+  @apply text-black bg-[#FF9900] font-bold;
 }
 
-.page-header {
-  @apply mb-6;
-}
+/* ─── Page layout helpers ──────────────────────── */
+.page-header  { @apply mb-6; }
+.page-title   { @apply text-2xl font-bold text-[#f0f0f0] uppercase tracking-wide; }
+.page-subtitle { @apply text-sm text-[#666] mt-1; }
 
-.page-title {
-  @apply text-2xl font-bold text-slate-100;
-}
-
-.page-subtitle {
-  @apply text-sm text-slate-400 mt-1;
-}
-
+/* ─── Stats card ───────────────────────────────── */
 .stats-card {
-  @apply rounded-xl border border-slate-800 bg-slate-900 p-6 shadow-sm transition-colors hover:border-slate-700;
+  @apply border-2 border-[#2d2d2d] bg-[#111] p-6 transition-all cursor-pointer;
+}
+.stats-card:hover {
+  @apply border-[#FF9900];
+  box-shadow: 4px 4px 0 0 #FF9900;
 }
 
-.table-container {
-  @apply rounded-xl border border-slate-800 bg-slate-900 overflow-hidden;
-}
+/* ─── Table ────────────────────────────────────── */
+.table-container { @apply border-2 border-[#2d2d2d] bg-[#111] overflow-hidden; }
+.table-header    { @apply bg-[#1a1a1a] px-4 py-3 text-xs font-bold text-[#777] uppercase tracking-widest; }
+.table-row       { @apply border-t-2 border-[#1a1a1a] px-4 py-3 hover:bg-[#1a1a1a] transition-colors; }
 
-.table-header {
-  @apply bg-slate-800 px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wider;
-}
+/* ─── Animations ───────────────────────────────── */
 
-.table-row {
-  @apply border-t border-slate-800 px-4 py-3 hover:bg-slate-800/60 transition-colors;
-}
-
+/* Page entrance: glitch-slide in */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
+  0%   { opacity: 0; transform: translateX(-3px); }
+  25%  { opacity: 0.5; transform: translateX(1px); }
+  60%  { opacity: 0.9; transform: translateX(-0.5px); }
+  100% { opacity: 1; transform: translateX(0); }
 }
-
 .animate-fadeIn {
   animation: fadeIn 0.2s ease-out backwards;
 }
 
-/* Same entrance, but opacity-only — safe for table rows, where animating
-   `transform` is unreliable across browsers. Used with an inline
-   animation-delay for staggered list entrances. */
+/* Table row entrance: opacity only (transform is unreliable in table rows) */
 @keyframes fadeInRow {
   from { opacity: 0; }
-  to { opacity: 1; }
+  to   { opacity: 1; }
+}
+.animate-fadeIn-row {
+  animation: fadeInRow 0.15s ease-out backwards;
 }
 
-.animate-fadeIn-row {
-  animation: fadeInRow 0.2s ease-out backwards;
+/* Skeleton scanline sweep */
+@keyframes scan {
+  0%   { top: -40%; }
+  100% { top: 140%; }
+}
+
+.loading-scan {
+  position: relative;
+  overflow: hidden;
+}
+
+.loading-scan::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -40%;
+  height: 30%;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(255, 153, 0, 0.07) 50%,
+    transparent 100%
+  );
+  animation: scan 2s linear infinite;
+  pointer-events: none;
+}
+
+/* Glitch flicker — for random glitch on any element */
+@keyframes glitch {
+  0%, 80%, 100% { transform: translate(0); opacity: 1; }
+  82%  { transform: translate(-2px, 0); opacity: 0.85; clip-path: inset(20% 0 50% 0); }
+  84%  { transform: translate(2px, 0);  opacity: 0.85; clip-path: inset(55% 0 15% 0); }
+  86%  { transform: translate(-1px, 0); opacity: 0.9;  clip-path: inset(35% 0 30% 0); }
+  88%  { transform: translate(0);       opacity: 1;    clip-path: none; }
+}
+
+.animate-glitch {
+  animation: glitch 4s ease-in-out infinite;
+}
+
+/* Cursor blink — for text-cursor style indicators */
+@keyframes blink-block {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+.animate-blink {
+  animation: blink-block 1s step-end infinite;
 }

@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { getRoleColor, getDomainColor, getSubdomainColor, formatRole } from '@/lib/utils';
+import { formatRole } from '@/lib/utils';
 import { canEditMembers } from '@/lib/permissions';
 import { DOMAIN_SUBDOMAINS } from '@/types';
 import Link from 'next/link';
@@ -85,9 +85,6 @@ export default function MemberProfilePage({ params }: { params: Promise<{ member
     setForm(f => ({ ...f, domain, subdomain: NONE }));
   }
 
-  // Presidium has no domain/subdomain; a Director has a domain but never a
-  // subdomain. Clear them client-side on role change so the form never
-  // submits a combination the server is going to reject anyway.
   function handleRoleChange(role: string) {
     setForm(f => {
       if (role === 'SBG_LEADER' || role === 'SECRETARY') return { ...f, role, domain: NONE, subdomain: NONE };
@@ -123,7 +120,7 @@ export default function MemberProfilePage({ params }: { params: Promise<{ member
   if (loading) return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div className="flex items-center gap-4">
-        <Skeleton className="h-9 w-9 rounded-lg" />
+        <Skeleton className="h-9 w-9" />
         <Skeleton className="h-5 w-32" />
       </div>
       <Card>
@@ -147,7 +144,7 @@ export default function MemberProfilePage({ params }: { params: Promise<{ member
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <Link href="/members"><Button variant="ghost" size="icon"><ArrowLeft size={18} /></Button></Link>
-          <h1 className="text-xl font-bold text-slate-100">Member Profile</h1>
+          <h1 className="text-xl font-bold text-[#f0f0f0] uppercase tracking-wide">Member Profile</h1>
         </div>
         {me && canEditMembers(me) && (
           <Button variant="outline" onClick={openEdit}><Pencil size={14} /> Edit</Button>
@@ -160,53 +157,53 @@ export default function MemberProfilePage({ params }: { params: Promise<{ member
           <div className="flex items-start gap-4">
             <div className="flex-1 min-w-0">
               <div className="flex flex-wrap items-center gap-2 mb-1">
-                <h2 className="text-xl font-bold text-slate-100">{member.name}</h2>
+                <h2 className="text-xl font-bold text-[#f0f0f0] uppercase tracking-wide">{member.name}</h2>
                 {!member.isActive && <Badge variant="destructive">Inactive</Badge>}
               </div>
-              <div className="flex flex-wrap gap-2 mb-3">
-                <Badge className={getRoleColor(member.role, member.domain)}>{formatRole(member.role, member.domain)}</Badge>
-                {member.domain && member.role !== 'DIRECTOR' && <Badge className={getDomainColor(member.domain)}>{member.domain}</Badge>}
-                {member.subdomain && <Badge className={getSubdomainColor(member.subdomain)}>{member.subdomain}</Badge>}
+              <div className="flex flex-wrap items-center gap-2 mb-3 text-xs text-[#888] font-mono uppercase">
+                <span>{formatRole(member.role, member.domain)}</span>
+                {member.domain && member.role !== 'DIRECTOR' && <><span className="text-[#333]">·</span><span>{member.domain}</span></>}
+                {member.subdomain && <><span className="text-[#333]">·</span><span>{member.subdomain}</span></>}
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
-                <div className="flex items-center gap-2 text-slate-400">
-                  <Mail size={14} className="text-slate-500" />
-                  <a href={`mailto:${member.officialEmail}`} className="hover:text-orange-500 truncate">{member.officialEmail}</a>
+                <div className="flex items-center gap-2 text-[#888]">
+                  <Mail size={14} className="text-[#555]" />
+                  <a href={`mailto:${member.officialEmail}`} className="hover:text-[#FF9900] truncate font-mono">{member.officialEmail}</a>
                 </div>
                 {member.phone && (
-                  <div className="flex items-center gap-2 text-slate-400">
-                    <Phone size={14} className="text-slate-500" />
-                    <span>{member.phone}</span>
+                  <div className="flex items-center gap-2 text-[#888]">
+                    <Phone size={14} className="text-[#555]" />
+                    <span className="font-mono">{member.phone}</span>
                   </div>
                 )}
                 {isSafeUrl(member.github) && (
                   <a href={member.github} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-2 text-slate-400 hover:text-orange-500">
-                    <Code2 size={14} className="text-slate-500" />
+                    className="flex items-center gap-2 text-[#888] hover:text-[#FF9900]">
+                    <Code2 size={14} className="text-[#555]" />
                     <span className="truncate">GitHub</span>
                     <ExternalLink size={11} />
                   </a>
                 )}
                 {isSafeUrl(member.linkedin) && (
                   <a href={member.linkedin} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-2 text-slate-400 hover:text-orange-500">
-                    <Link2 size={14} className="text-slate-500" />
+                    className="flex items-center gap-2 text-[#888] hover:text-[#FF9900]">
+                    <Link2 size={14} className="text-[#555]" />
                     <span className="truncate">LinkedIn</span>
                     <ExternalLink size={11} />
                   </a>
                 )}
                 {isSafeUrl(member.instagram) && (
                   <a href={member.instagram} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-2 text-slate-400 hover:text-orange-500">
-                    <Camera size={14} className="text-slate-500" />
+                    className="flex items-center gap-2 text-[#888] hover:text-[#FF9900]">
+                    <Camera size={14} className="text-[#555]" />
                     <span className="truncate">Instagram</span>
                     <ExternalLink size={11} />
                   </a>
                 )}
                 {isSafeUrl(member.builderId) && (
                   <a href={member.builderId} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-2 text-slate-400 hover:text-orange-500">
-                    <Award size={14} className="text-slate-500" />
+                    className="flex items-center gap-2 text-[#888] hover:text-[#FF9900]">
+                    <Award size={14} className="text-[#555]" />
                     <span className="truncate">AWS Builder ID</span>
                     <ExternalLink size={11} />
                   </a>
@@ -219,7 +216,7 @@ export default function MemberProfilePage({ params }: { params: Promise<{ member
 
       <Card>
         <CardContent className="p-6">
-          <div className="grid gap-4 text-sm">
+          <div className="grid gap-0 text-sm">
             {[
               { label: 'Club ID', value: member.clubId },
               { label: 'Registration No.', value: member.regNo },
@@ -232,9 +229,9 @@ export default function MemberProfilePage({ params }: { params: Promise<{ member
               { label: 'FA Phone', value: member.faPhone },
               { label: 'Meetup', value: member.meetup },
             ].filter(i => i.value).map(item => (
-              <div key={item.label} className="flex items-baseline justify-between gap-4 py-2 border-b border-slate-800 last:border-0">
-                <span className="text-slate-400 flex-shrink-0">{item.label}</span>
-                <span className="text-slate-100 font-medium text-right break-all">{item.value}</span>
+              <div key={item.label} className="flex items-baseline justify-between gap-4 py-2.5 border-b border-[#1e1e1e] last:border-0">
+                <span className="text-[#666] flex-shrink-0 uppercase tracking-wide text-xs">{item.label}</span>
+                <span className="text-[#f0f0f0] font-bold text-right break-all font-mono text-sm">{item.value}</span>
               </div>
             ))}
           </div>
