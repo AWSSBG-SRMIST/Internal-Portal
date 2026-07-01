@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect, use, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import {
@@ -16,6 +16,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Pagination } from '@/components/ui/pagination';
+import { usePagination } from '@/hooks/usePagination';
 import { formatDateTime, timeAgo, isDeadlinePassed, getAssignmentTypeColor, getAssignmentScopeLabel, getDomainColor, getSubdomainColor, getPriorityColor } from '@/lib/utils';
 import { getSubmissionTimingLabel } from '@/lib/ratings';
 import Link from 'next/link';
@@ -51,6 +53,13 @@ export default function TaskDetailPage({ params }: { params: Promise<{ taskId: s
   const [showEdit, setShowEdit] = useState(false);
   const [editForm, setEditForm] = useState({ title: '', description: '', deadline: '', priority: 'MEDIUM' });
   const [saving, setSaving] = useState(false);
+  const [subFilter, setSubFilter] = useState('ALL');
+
+  const filteredSubs = useMemo(() =>
+    !data ? [] : data.submissions.filter(s => subFilter === 'ALL' || s.reviewStatus === subFilter),
+    [data, subFilter]
+  );
+  const { page: subPage, setPage: setSubPage, totalPages: subTotalPages, paginatedItems: paginatedSubs } = usePagination(filteredSubs, 7);
 
   useEffect(() => { fetchTask(); }, [taskId]);
 
@@ -433,9 +442,23 @@ export default function TaskDetailPage({ params }: { params: Promise<{ taskId: s
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {submissions.length === 0 ? (
-              <p className="text-center text-[#555] py-8 text-sm font-mono uppercase tracking-wide">No submissions yet</p>
-            ) : submissions.map(sub => (
+            {/* Filter */}
+            <Select value={subFilter} onValueChange={v => { setSubFilter(v); setSubPage(1); }}>
+              <SelectTrigger className="w-full sm:w-48">
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All ({submissions.length})</SelectItem>
+                <SelectItem value="PENDING">Pending ({submissions.filter(s => s.reviewStatus === 'PENDING').length})</SelectItem>
+                <SelectItem value="APPROVED">Approved ({submissions.filter(s => s.reviewStatus === 'APPROVED').length})</SelectItem>
+                <SelectItem value="REJECTED">Rejected ({submissions.filter(s => s.reviewStatus === 'REJECTED').length})</SelectItem>
+                <SelectItem value="REVISION_REQUESTED">Revision Requested ({submissions.filter(s => s.reviewStatus === 'REVISION_REQUESTED').length})</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {filteredSubs.length === 0 ? (
+              <p className="text-center text-[#555] py-8 text-sm font-mono uppercase tracking-wide">No submissions match filter</p>
+            ) : paginatedSubs.map(sub => (
               <div key={sub.submissionId} className={`border-2 p-4 space-y-3 ${
                 sub.reviewStatus === 'APPROVED'           ? 'border-green-500/30 bg-green-500/5' :
                 sub.reviewStatus === 'REJECTED'           ? 'border-red-500/30 bg-red-500/5' :
@@ -532,6 +555,7 @@ export default function TaskDetailPage({ params }: { params: Promise<{ taskId: s
                 )}
               </div>
             ))}
+            <Pagination page={subPage} totalPages={subTotalPages} onPageChange={setSubPage} />
           </CardContent>
         </Card>
       )}
