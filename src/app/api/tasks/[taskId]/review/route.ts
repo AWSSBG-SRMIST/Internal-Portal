@@ -4,7 +4,7 @@ import { db, TABLE, GetCommand, UpdateCommand } from '@/lib/dynamodb';
 import { logAction } from '@/lib/audit';
 import { calculateRating, applyRating } from '@/lib/ratings';
 import { canReviewSubmission } from '@/lib/permissions';
-import type { Domain, Subdomain, TaskPriority } from '@/types';
+import type { Domain, Subdomain } from '@/types';
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ taskId: string }> }) {
   const user = await getCurrentUser();
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tas
     let ratingDelta = 0;
     let late = false;
     if (action === 'APPROVE') {
-      const result = calculateRating(submission.submittedAt, submission.deadline, (task.priority as TaskPriority) || 'MEDIUM');
+      const result = calculateRating(submission.submittedAt, submission.deadline);
       ratingDelta = result.delta;
       late = result.late;
     }

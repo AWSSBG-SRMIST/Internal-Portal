@@ -335,8 +335,10 @@ export default function TaskDetailPage({ params }: { params: Promise<{ taskId: s
             <div><span className="font-bold text-blue-400">+1⭐</span> Last 24h before deadline</div>
             <div><span className="font-bold text-[#888]">+0⭐</span> Within 24h after deadline</div>
             <div><span className="font-bold text-red-400">-1⭐</span> More than 24h after deadline</div>
+            <div className="col-span-2 border-t border-blue-500/20 pt-1.5 mt-0.5">
+              <span className="font-bold text-red-500">-2⭐</span> <span className="text-blue-500">No submission 24h+ past deadline (auto-close)</span>
+            </div>
           </div>
-          <p className="text-xs text-blue-500 mt-2 font-mono">Priority: LOW×1 · MEDIUM×1.5 · HIGH×2</p>
         </CardContent>
       </Card>
 

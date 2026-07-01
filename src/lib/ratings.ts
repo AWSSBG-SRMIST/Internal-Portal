@@ -1,29 +1,21 @@
 import { db, TABLE, UpdateCommand } from './dynamodb';
-import type { TaskPriority } from '@/types';
 
-const PRIORITY_MULTIPLIER: Record<TaskPriority, number> = {
-  LOW: 1,
-  MEDIUM: 1.5,
-  HIGH: 2,
-};
-
-// Base star scale (new values): +2 early, +1 on-time, 0 late, -1 very late.
-// Multiplied by priority (LOW×1, MEDIUM×1.5, HIGH×2) and rounded.
+// Flat star scale — priority does NOT affect the delta.
+// +2 early, +1 on-time, 0 late, -1 very late.
 export function calculateRating(
   submittedAt: string,
   deadline: string,
-  priority: TaskPriority = 'MEDIUM',
 ): { delta: number; late: boolean } {
   const diffHours = (new Date(submittedAt).getTime() - new Date(deadline).getTime()) / (1000 * 60 * 60);
   const late = diffHours > 0;
 
-  let base: number;
-  if (diffHours < -24) base = 2;      // >24h before deadline
-  else if (diffHours <= 0) base = 1;  // within last 24h before deadline
-  else if (diffHours <= 24) base = 0; // within 24h after deadline
-  else base = -1;                      // more than 24h after deadline
+  let delta: number;
+  if (diffHours < -24) delta = 2;      // >24h before deadline
+  else if (diffHours <= 0) delta = 1;  // within last 24h before deadline
+  else if (diffHours <= 24) delta = 0; // within 24h after deadline
+  else delta = -1;                      // more than 24h after deadline
 
-  return { delta: Math.round(base * PRIORITY_MULTIPLIER[priority]), late };
+  return { delta, late };
 }
 
 // Atomically records a review outcome in the ratings table and updates the
