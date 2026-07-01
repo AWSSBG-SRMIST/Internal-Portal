@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    if (!Array.isArray(body.agenda) && !Array.isArray(body.discussion)) {
+    if (!Array.isArray(body.agenda) || !Array.isArray(body.discussion)) {
       return NextResponse.json({ error: 'Missing structured minutes — generate a preview first' }, { status: 400 });
     }
 

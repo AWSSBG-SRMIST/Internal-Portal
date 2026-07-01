@@ -27,7 +27,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ code
       ExpressionAttributeValues: { ':zero': 0, ':one': 1 },
     })).catch(console.error);
 
-    return NextResponse.redirect(targetUrl, { status: 301 });
+    return NextResponse.redirect(targetUrl, { status: 302 });
   } catch (error) {
     return NextResponse.redirect(new URL('/', req.url));
   }

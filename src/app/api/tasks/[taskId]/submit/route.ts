@@ -69,7 +69,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tas
     const { content, links } = await req.json();
     if (!content?.trim()) return NextResponse.json({ error: 'Content is required' }, { status: 400 });
 
-    const validLinks = (links || []).filter((l: string) => {
+    const MAX_CONTENT_LENGTH = 10_000;
+    const MAX_LINKS = 20;
+    if (content.trim().length > MAX_CONTENT_LENGTH) {
+      return NextResponse.json({ error: `Content exceeds maximum length (${MAX_CONTENT_LENGTH} characters)` }, { status: 400 });
+    }
+
+    const validLinks = (links || []).slice(0, MAX_LINKS).filter((l: string) => {
       try {
         const p = new URL(l);
         return p.protocol === 'https:' || p.protocol === 'http:';

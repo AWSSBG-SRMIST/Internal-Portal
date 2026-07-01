@@ -6,6 +6,7 @@ import { canCreateTask, isTaskVisible, canCreateScope } from '@/lib/permissions'
 import { autoCloseIfExpired } from '@/lib/tasks';
 import { isDeadlinePassed } from '@/lib/utils';
 import { randomUUID } from 'crypto';
+import { sendTaskAssignmentEmail } from '@/lib/email';
 import type { TaskAssignmentScope, SubmissionMode } from '@/types';
 
 const VALID_SCOPES: TaskAssignmentScope[] = [
@@ -87,6 +88,9 @@ export async function POST(req: NextRequest) {
     if (!title || !description || !deadline || !scope) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
+    if (!deadline || isNaN(new Date(deadline).getTime())) {
+      return NextResponse.json({ error: 'deadline must be a valid date' }, { status: 400 });
+    }
     if (!VALID_SCOPES.includes(scope)) {
       return NextResponse.json({ error: 'Invalid assignment scope' }, { status: 400 });
     }
@@ -111,7 +115,10 @@ export async function POST(req: NextRequest) {
     } else if (scope === 'SINGLE_DIRECTOR') {
       const t = await db.send(new GetCommand({ TableName: TABLE.MEMBERS, Key: { memberId: assignedToId } }));
       if (!t.Item || t.Item.role !== 'DIRECTOR') {
-        return NextResponse.json({ error: 'Target must be an active Director' }, { status: 400 });
+        return NextResponse.json({ error: 'Target must be a Director' }, { status: 400 });
+      }
+      if (t.Item.isActive === false) {
+        return NextResponse.json({ error: 'Target Director is inactive' }, { status: 400 });
       }
       resolvedAssignedToName = t.Item.name;
       resolvedAssignedToId = assignedToId;
@@ -173,6 +180,53 @@ export async function POST(req: NextRequest) {
 
     await db.send(new PutCommand({ TableName: TABLE.TASKS, Item: task }));
     await logAction(user, 'CREATE_TASK', 'TASK', taskId, `Created task: ${title} [${scope}/${resolvedMode}]`);
+
+    // Send assignment notification emails — failures don't block the response
+    try {
+      const membersResult = await db.send(new ScanCommand({
+        TableName: TABLE.MEMBERS,
+        ProjectionExpression: 'memberId, #n, officialEmail, #r, #d, subdomain, isActive',
+        ExpressionAttributeNames: { '#n': 'name', '#r': 'role', '#d': 'domain' },
+      }));
+      const active = ((membersResult.Items || []) as any[]).filter(
+        m => m.isActive !== false && m.officialEmail && m.memberId !== user.memberId
+      );
+
+      let targets: any[] = [];
+      if (scope === 'ORG_WIDE') {
+        targets = active;
+      } else if (scope === 'ALL_DIRECTORS') {
+        targets = active.filter(m => m.role === 'DIRECTOR');
+      } else if (scope === 'SINGLE_DIRECTOR' || scope === 'INDIVIDUAL') {
+        targets = active.filter(m => m.memberId === resolvedAssignedToId);
+      } else if (scope === 'DOMAIN_WIDE') {
+        targets = active.filter(m => m.domain === resolvedDomain);
+      } else if (scope === 'SUBDOMAIN_LEADERSHIP') {
+        targets = active.filter(m =>
+          m.domain === resolvedDomain && m.subdomain === resolvedSubdomain &&
+          (m.role === 'MANAGER' || m.role === 'ASSOCIATE')
+        );
+      } else if (scope === 'SUBDOMAIN_WIDE') {
+        targets = active.filter(m => m.domain === resolvedDomain && m.subdomain === resolvedSubdomain);
+      } else if (scope === 'BUILDERS_ONLY') {
+        targets = active.filter(m =>
+          m.domain === resolvedDomain && m.subdomain === resolvedSubdomain && m.role === 'BUILDER'
+        );
+      }
+
+      const taskUrl = `${process.env.NEXT_PUBLIC_APP_URL || ''}/tasks/${taskId}`;
+      await Promise.allSettled(
+        targets.map(m => sendTaskAssignmentEmail(
+          m.officialEmail, m.name,
+          title, description,
+          deadline, task.priority,
+          user.name, taskUrl,
+          resolvedAssignedToName,
+        ))
+      );
+    } catch (err) {
+      console.error('Task assignment emails failed:', err);
+    }
 
     return NextResponse.json({ success: true, data: task });
   } catch (error) {

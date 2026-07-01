@@ -65,14 +65,18 @@ export async function getAnalyticsData(): Promise<AnalyticsResponse> {
 
   const dailyTasks: Record<string, number> = {};
   recentTasks.forEach((t: any) => {
-    const day = new Date(t.createdAt).toLocaleDateString('en-US', { month: 'short', day: '2-digit' });
+    // Use ISO date (YYYY-MM-DD) as key so string sort gives correct chronological order.
+    const day = new Date(t.createdAt).toISOString().slice(0, 10);
     dailyTasks[day] = (dailyTasks[day] || 0) + 1;
   });
 
   const taskTrend = Object.entries(dailyTasks)
-    .map(([date, count]) => ({ date, count }))
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-    .slice(-10);
+    .sort(([a], [b]) => a.localeCompare(b))
+    .slice(-10)
+    .map(([date, count]) => ({
+      date: new Date(date + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'short', day: '2-digit' }),
+      count,
+    }));
 
   return {
     overview: {

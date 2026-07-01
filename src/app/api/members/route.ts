@@ -46,6 +46,19 @@ export async function GET(req: NextRequest) {
     // Sort by name
     members.sort((a: any, b: any) => (a.name || '').localeCompare(b.name || ''));
 
+    // Strip PII from the list response for non-privileged users.
+    // Privileged = Presidium or HR & Admin Manager/Associate.
+    const privileged = isPresidium(user) ||
+      (user.subdomain === 'HR & Admin' && (user.role === 'MANAGER' || user.role === 'ASSOCIATE'));
+    if (!privileged) {
+      const PII_FIELDS = ['phone', 'personalEmail', 'whatsapp', 'instagram', 'regNo'];
+      members = members.map((m: any) => {
+        const stripped = { ...m };
+        for (const f of PII_FIELDS) delete stripped[f];
+        return stripped;
+      });
+    }
+
     return NextResponse.json({ success: true, data: members });
   } catch (error) {
     console.error('Get members error:', error);
@@ -75,7 +88,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'A member with that email already exists' }, { status: 409 });
     }
 
-    const scopeError = validateRoleScope(body.role || 'BUILDER', body.domain, body.subdomain);
+    const VALID_ROLES = ['SBG_LEADER', 'SECRETARY', 'DIRECTOR', 'MANAGER', 'ASSOCIATE', 'BUILDER'];
+    const roleToUse = body.role || 'BUILDER';
+    if (!VALID_ROLES.includes(roleToUse)) {
+      return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
+    }
+
+    const scopeError = validateRoleScope(roleToUse, body.domain, body.subdomain);
     if (scopeError) return NextResponse.json({ error: scopeError }, { status: 400 });
 
     const memberId = randomUUID();

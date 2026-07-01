@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers';
-import { db, TABLE, GetCommand, PutCommand, DeleteCommand, UpdateCommand } from './dynamodb';
+import { createHash } from 'crypto';
+import { db, TABLE, GetCommand, PutCommand, DeleteCommand, UpdateCommand, ScanCommand } from './dynamodb';
 import type { SessionUser } from '@/types';
 
 const SESSION_TTL = 7 * 24 * 60 * 60;
@@ -7,6 +8,10 @@ const OTP_TTL = 5 * 60;
 const OTP_RESEND_COOLDOWN = 60; // seconds between resends
 const OTP_MAX_ATTEMPTS = 5;
 const SESSION_COOKIE = 'sbg_session';
+
+function hashOTP(otp: string): string {
+  return createHash('sha256').update(otp).digest('hex');
+}
 
 function randomToken(): string {
   if (typeof crypto === 'undefined' || !crypto.getRandomValues) {
@@ -21,7 +26,7 @@ export async function storeOTP(email: string, otp: string): Promise<void> {
   const now = Math.floor(Date.now() / 1000);
   await db.send(new PutCommand({
     TableName: TABLE.OTPS,
-    Item: { email, otp, expiresAt: now + OTP_TTL, sentAt: now, attempts: 0 },
+    Item: { email, otp: hashOTP(otp), expiresAt: now + OTP_TTL, sentAt: now, attempts: 0 },
   }));
 }
 
@@ -38,7 +43,7 @@ export async function verifyOTP(email: string, otp: string): Promise<'valid' | '
   const now = Math.floor(Date.now() / 1000);
   if (result.Item.expiresAt < now) return 'expired';
   if ((result.Item.attempts || 0) >= OTP_MAX_ATTEMPTS) return 'locked';
-  if (result.Item.otp !== otp) {
+  if (result.Item.otp !== hashOTP(otp)) {
     await db.send(new UpdateCommand({
       TableName: TABLE.OTPS,
       Key: { email },
@@ -100,6 +105,24 @@ export function setSessionCookie(token: string): { name: string; value: string; 
     maxAge: SESSION_TTL,
     path: '/',
   };
+}
+
+export async function invalidateSessionsForMember(memberId: string): Promise<void> {
+  const tokens: string[] = [];
+  let lastKey: Record<string, any> | undefined;
+  do {
+    const result = await db.send(new ScanCommand({
+      TableName: TABLE.SESSIONS,
+      FilterExpression: 'memberId = :mid',
+      ExpressionAttributeValues: { ':mid': memberId },
+      ProjectionExpression: 'sessionToken',
+    }));
+    tokens.push(...(result.Items || []).map((s: any) => s.sessionToken));
+    lastKey = result.LastEvaluatedKey as Record<string, any> | undefined;
+  } while (lastKey);
+  await Promise.all(tokens.map(token =>
+    db.send(new DeleteCommand({ TableName: TABLE.SESSIONS, Key: { sessionToken: token } }))
+  ));
 }
 
 export const SESSION_COOKIE_NAME = SESSION_COOKIE;

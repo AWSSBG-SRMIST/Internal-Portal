@@ -49,7 +49,8 @@ export default function LoginPage() {
       const data = await res.json();
       if (!res.ok) { toast.error(data.error || 'Invalid OTP'); return; }
       toast.success('Signed in successfully!');
-      window.location.href = '/dashboard';
+      const next = new URLSearchParams(window.location.search).get('next');
+      window.location.href = (next && next.startsWith('/')) ? next : '/dashboard';
     } catch {
       toast.error('Network error. Please try again.');
     } finally {

@@ -10,6 +10,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ code
   if (!canUseLinkShortener(user)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const { code } = await params;
+  if (!/^[a-zA-Z0-9_-]{1,50}$/.test(code)) {
+    return NextResponse.json({ error: 'Link not found' }, { status: 404 });
+  }
   const result = await db.send(new GetCommand({ TableName: TABLE.LINKS, Key: { shortCode: code } }));
   if (!result.Item) return NextResponse.json({ error: 'Link not found' }, { status: 404 });
   return NextResponse.json({ success: true, data: result.Item });
@@ -21,6 +24,9 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ c
   if (!canUseLinkShortener(user)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const { code } = await params;
+  if (!/^[a-zA-Z0-9_-]{1,50}$/.test(code)) {
+    return NextResponse.json({ error: 'Link not found' }, { status: 404 });
+  }
 
   try {
     const result = await db.send(new GetCommand({ TableName: TABLE.LINKS, Key: { shortCode: code } }));

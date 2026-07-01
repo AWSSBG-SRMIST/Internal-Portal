@@ -14,8 +14,12 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
+    const MAX_SCRIBE_LENGTH = 20_000;
     const scribeRaw = (body.scribeRaw || '').trim();
     if (!scribeRaw) return NextResponse.json({ error: 'Meeting notes/scribe text is required' }, { status: 400 });
+    if (scribeRaw.length > MAX_SCRIBE_LENGTH) {
+      return NextResponse.json({ error: 'Meeting notes too long (max 20,000 characters)' }, { status: 400 });
+    }
 
     const structured = body.feedback && body.previous
       ? await reviseMoMStructure(scribeRaw, body.previous, body.feedback)
@@ -24,6 +28,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, data: structured });
   } catch (error) {
     console.error('Structure MoM error:', error);
-    return NextResponse.json({ error: error instanceof Error ? error.message : 'Failed to draft minutes' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to draft minutes' }, { status: 500 });
   }
 }

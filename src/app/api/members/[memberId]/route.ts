@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getCurrentUser } from '@/lib/auth';
+import { getCurrentUser, invalidateSessionsForMember } from '@/lib/auth';
 import { db, TABLE, GetCommand, UpdateCommand } from '@/lib/dynamodb';
 import { logAction } from '@/lib/audit';
 import { isPresidium, canEditMembers, validateRoleScope } from '@/lib/permissions';
@@ -37,9 +37,14 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ memb
 
   try {
     const body = await req.json();
-    const allowedFields = canEditMembers(user)
+    // Presidium can change any field including role/domain/subdomain.
+    // HR & Admin (non-Presidium canEditMembers) can edit operational fields but NOT role/domain/subdomain.
+    // Everyone else can only update their own personal contact fields.
+    const allowedFields = isPresidium(user)
       ? ['name', 'role', 'domain', 'subdomain', 'department', 'section', 'phone', 'whatsapp', 'github', 'linkedin', 'instagram', 'meetup', 'builderId', 'personalEmail', 'faName', 'faEmail', 'faPhone', 'isActive', 'clubId', 'regNo']
-      : ['phone', 'github', 'linkedin', 'meetup', 'personalEmail'];
+      : canEditMembers(user)
+        ? ['name', 'department', 'section', 'phone', 'whatsapp', 'github', 'linkedin', 'instagram', 'meetup', 'builderId', 'personalEmail', 'faName', 'faEmail', 'faPhone', 'isActive', 'clubId', 'regNo']
+        : ['phone', 'github', 'linkedin', 'meetup', 'personalEmail'];
 
     // URL fields are rendered back as <a href> client-side, so a non-http(s)
     // scheme (e.g. javascript:) would execute in the viewer's session — reject
@@ -111,6 +116,15 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ memb
       ...(Object.keys(exprValues).length > 0 ? { ExpressionAttributeValues: exprValues } : {}),
     }));
 
+    // Invalidate all active sessions if the member's role or active status changed —
+    // their session token carries stale role data and must be re-issued on next login.
+    if (
+      (body.role !== undefined && allowedFields.includes('role')) ||
+      (body.isActive !== undefined && body.isActive === false)
+    ) {
+      await invalidateSessionsForMember(memberId).catch(console.error);
+    }
+
     await logAction(user, 'UPDATE_MEMBER', 'MEMBER', memberId, `Updated fields: ${Object.keys(body).join(', ')}`);
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -135,6 +149,8 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ m
       UpdateExpression: 'SET isActive = :false',
       ExpressionAttributeValues: { ':false': false },
     }));
+    // Force-logout the deactivated member by clearing all their sessions.
+    await invalidateSessionsForMember(memberId).catch(console.error);
     await logAction(user, 'DEACTIVATE_MEMBER', 'MEMBER', memberId, 'Member deactivated');
     return NextResponse.json({ success: true });
   } catch (error) {

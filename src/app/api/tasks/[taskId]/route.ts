@@ -45,7 +45,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ task
       if (active) collectiveLockedBy = { memberId: active.memberId, memberName: active.memberName };
     }
 
-    const canReview = isPresidium(user) || user.role === 'DIRECTOR' || user.role === 'MANAGER';
+    // Scope-gate canReview: a DIRECTOR can only review submissions within their domain,
+    // and a MANAGER within their domain+subdomain. ORG_WIDE tasks (no domain) are open to all.
+    const canReview = isPresidium(user)
+      || (user.role === 'DIRECTOR' && (!taskResult.Item.domain || taskResult.Item.domain === user.domain))
+      || (user.role === 'MANAGER' && (!taskResult.Item.domain || (taskResult.Item.domain === user.domain && (!taskResult.Item.subdomain || taskResult.Item.subdomain === user.subdomain))));
     const visibleSubmissions = canReview ? submissions : mySubmissions;
     const canSubmit = taskResult.Item.status === 'OPEN'
       && !collectiveLockedBy
@@ -92,6 +96,11 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ task
 
     const task = await db.send(new GetCommand({ TableName: TABLE.TASKS, Key: { taskId } }));
     if (!task.Item) return NextResponse.json({ error: 'Task not found' }, { status: 404 });
+
+    // Prevent leaking task existence — non-visible tasks appear as 404.
+    if (!isTaskVisible(user, task.Item as any)) {
+      return NextResponse.json({ error: 'Task not found' }, { status: 404 });
+    }
 
     const canReview = isPresidium(user) || user.role === 'DIRECTOR' || user.role === 'MANAGER';
     const isCreator = task.Item.createdBy === user.memberId;

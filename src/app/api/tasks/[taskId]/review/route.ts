@@ -21,6 +21,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tas
       return NextResponse.json({ error: 'feedback must be a string' }, { status: 400 });
     }
     const trimmedFeedback = (feedback || '').trim() || null;
+    if (action === 'REVISE' && !trimmedFeedback) {
+      return NextResponse.json({ error: 'Feedback is required when requesting a revision' }, { status: 400 });
+    }
 
     const [submissionResult, taskResult] = await Promise.all([
       db.send(new GetCommand({ TableName: TABLE.SUBMISSIONS, Key: { submissionId } })),
@@ -71,13 +74,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tas
       TableName: TABLE.SUBMISSIONS,
       Key: { submissionId },
       UpdateExpression: 'SET reviewStatus = :s, reviewedBy = :rb, reviewedByName = :rbn, reviewedAt = :ra, ratingAwarded = :r, reviewFeedback = :fb',
+      ConditionExpression: 'reviewStatus = :pending',
       ExpressionAttributeValues: {
-        ':s':   newStatus,
-        ':rb':  user.memberId,
-        ':rbn': user.name,
-        ':ra':  new Date().toISOString(),
-        ':r':   action === 'APPROVE' ? ratingDelta : null,
-        ':fb':  trimmedFeedback,
+        ':s':       newStatus,
+        ':rb':      user.memberId,
+        ':rbn':     user.name,
+        ':ra':      new Date().toISOString(),
+        ':r':       action === 'APPROVE' ? ratingDelta : null,
+        ':fb':      trimmedFeedback,
+        ':pending': 'PENDING',
       },
     }));
 
@@ -96,7 +101,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tas
     );
 
     return NextResponse.json({ success: true, ratingAwarded: action === 'APPROVE' ? ratingDelta : null });
-  } catch (error) {
+  } catch (error: any) {
+    if (error.name === 'ConditionalCheckFailedException') {
+      return NextResponse.json({ error: 'Submission has already been reviewed' }, { status: 409 });
+    }
     console.error('Review error:', error);
     return NextResponse.json({ error: 'Failed to review submission' }, { status: 500 });
   }

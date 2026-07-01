@@ -46,8 +46,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Account is inactive. Contact your administrator.' }, { status: 403 });
     }
 
-    await deleteOTP(normalizedEmail);
-
     const sessionUser: SessionUser = {
       memberId: member.memberId,
       name: member.name,
@@ -57,7 +55,10 @@ export async function POST(req: NextRequest) {
       subdomain: member.subdomain || null,
     };
 
+    // Create session before deleting OTP — if createSession fails the user
+    // can retry with the same OTP rather than being permanently locked out.
     const token = await createSession(sessionUser);
+    await deleteOTP(normalizedEmail);
     const cookieOpts = setSessionCookie(token);
 
     const response = NextResponse.json({ success: true, user: sessionUser });
