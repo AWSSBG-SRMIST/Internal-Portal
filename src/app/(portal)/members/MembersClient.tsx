@@ -20,7 +20,7 @@ function MemberMobileCard({ member, hideDomain, hideStars, hideSubdomain, delay 
   return (
     <Link
       href={`/members/${member.memberId}`}
-      className="block border border-[#1e1e1e] bg-[#111] p-4 animate-fadeIn active:bg-[#1a1a1a] hover:border-[#FF9900] transition-colors"
+      className="block border-2 border-[#2d2d2d] bg-[#111] p-4 animate-fadeIn active:bg-[#1a1a1a] hover:border-[#FF9900] transition-colors"
       style={{ animationDelay: `${delay}ms` }}
     >
       <div className="flex items-center gap-3">

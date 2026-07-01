@@ -20,7 +20,21 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body>
         {children}
-        <Toaster position="top-right" richColors />
+        <Toaster
+          position="top-right"
+          theme="dark"
+          toastOptions={{
+            classNames: {
+              toast: '!rounded-none !border-2 !border-[#2d2d2d] !bg-[#0f0f0f] !text-[#f0f0f0] !font-mono !shadow-[4px_4px_0_0_#1a1a1a]',
+              title: '!font-bold !uppercase !tracking-wide !text-xs',
+              description: '!text-[#888] !text-xs',
+              success: '!border-[#FF9900]',
+              error: '!border-red-500',
+              warning: '!border-yellow-500',
+              info: '!border-blue-500',
+            },
+          }}
+        />
         <SpeedInsights />
         <Analytics />
       </body>

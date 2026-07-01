@@ -176,7 +176,7 @@ export default async function DashboardPage() {
                 <div className="space-y-2">
                   {stats.teamTasks.map((task: any) => (
                     <Link href={`/tasks/${task.taskId}`} key={task.taskId}>
-                      <div className="flex items-start gap-3 p-3 hover:bg-[#1a1a1a] transition-colors border border-[#1e1e1e]">
+                      <div className="flex items-start gap-3 p-3 hover:bg-[#1a1a1a] transition-colors border-2 border-[#2d2d2d]">
                         <div className="w-2 h-2 bg-purple-400 mt-1.5 flex-shrink-0" />
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-medium text-[#f0f0f0] truncate">{task.title}</p>
@@ -215,7 +215,7 @@ export default async function DashboardPage() {
             ) : (
               <div className="space-y-2">
                 {stats.myRecentSubmissions.map((sub: any) => (
-                  <div key={sub.submissionId} className="flex items-center gap-3 p-3 border border-[#1e1e1e]">
+                  <div key={sub.submissionId} className="flex items-center gap-3 p-3 border-2 border-[#2d2d2d]">
                     <div className={`w-2 h-2 flex-shrink-0 ${
                       sub.reviewStatus === 'APPROVED' ? 'bg-green-400' :
                       sub.reviewStatus === 'REJECTED' ? 'bg-red-400' : 'bg-yellow-400'

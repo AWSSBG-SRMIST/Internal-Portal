@@ -86,7 +86,7 @@ export default async function ProfilePage() {
                       { label: 'Rejected', value: rating.rejectedCount || 0, color: 'text-red-400' },
                       { label: 'Pending', value: rating.pendingCount || 0, color: 'text-yellow-400' },
                     ].map(s => (
-                      <div key={s.label} className="bg-[#1a1a1a] border border-[#2d2d2d] p-3 text-center">
+                      <div key={s.label} className="bg-[#1a1a1a] border-2 border-[#2d2d2d] p-3 text-center">
                         <div className={`text-xl font-bold font-mono ${s.color}`}>{s.value}</div>
                         <div className="text-xs text-[#666] mt-1 uppercase tracking-wide">{s.label}</div>
                       </div>
@@ -110,7 +110,7 @@ export default async function ProfilePage() {
             ) : (
               <div className="space-y-2">
                 {recentSubs.map((sub: any) => (
-                  <div key={sub.submissionId} className="flex items-center gap-3 p-3 border border-[#1e1e1e]">
+                  <div key={sub.submissionId} className="flex items-center gap-3 p-3 border-2 border-[#2d2d2d]">
                     <div className={`w-2 h-2 flex-shrink-0 ${sub.reviewStatus === 'APPROVED' ? 'bg-green-400' : sub.reviewStatus === 'REJECTED' ? 'bg-red-400' : sub.reviewStatus === 'REVISION_REQUESTED' ? 'bg-orange-400' : 'bg-yellow-400'}`} />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-[#f0f0f0] truncate">{sub.taskTitle}</p>

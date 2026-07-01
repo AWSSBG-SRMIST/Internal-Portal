@@ -22,7 +22,7 @@ function RoleTable({ roleLabel, members, showDomainColumn }: { roleLabel: string
       <div className="sm:hidden space-y-2">
         {members.map((m, idx) => (
           <Link key={m.memberId} href={`/members/${m.memberId}`}
-            className="block border border-[#1e1e1e] bg-[#111] p-3 active:bg-[#1a1a1a] hover:border-[#FF9900] transition-colors">
+            className="block border-2 border-[#2d2d2d] bg-[#111] p-3 active:bg-[#1a1a1a] hover:border-[#FF9900] transition-colors">
             <div className="flex items-center gap-3">
               <span className="text-sm text-[#555] font-mono w-5 flex-shrink-0">{idx + 1}</span>
               <span className="text-sm font-bold text-[#f0f0f0] truncate flex-1 min-w-0 uppercase tracking-wide">{m.name}</span>

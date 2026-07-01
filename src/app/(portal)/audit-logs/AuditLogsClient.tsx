@@ -109,7 +109,7 @@ export default function AuditLogsClient({ initialLogs }: { initialLogs: AuditLog
                         <p className="text-xs text-[#555] mt-1 font-mono">{formatDateTime(log.timestamp)}</p>
                       </div>
                       <div className="text-xs text-[#555] flex-shrink-0">
-                        <span className="bg-[#1a1a1a] px-2 py-0.5 border border-[#2d2d2d] font-mono">{log.targetType}</span>
+                        <span className="bg-[#1a1a1a] px-2 py-0.5 border-2 border-[#2d2d2d] font-mono text-xs">{log.targetType}</span>
                       </div>
                     </div>
                   </div>

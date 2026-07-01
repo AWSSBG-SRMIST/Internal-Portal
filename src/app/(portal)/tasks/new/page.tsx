@@ -266,7 +266,7 @@ export default function NewTaskPage() {
             <div className="space-y-2">
               <Label>Assign To *</Label>
               {availableScopes.length === 1 ? (
-                <div className="border border-[#2d2d2d] bg-[#1a1a1a] p-3">
+                <div className="border-2 border-[#2d2d2d] bg-[#1a1a1a] p-3">
                   <p className="text-sm font-bold text-[#e0e0e0] uppercase tracking-wide">{availableScopes[0].label}</p>
                   <p className="text-xs text-[#888] mt-0.5">{availableScopes[0].description}</p>
                 </div>

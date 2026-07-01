@@ -368,7 +368,7 @@ export default function MoMPage() {
             </div>
             <div className="space-y-2">
               <Label>Prepared By</Label>
-              <p className="flex h-9 items-center border border-[#1e1e1e] bg-[#111] px-3 text-sm text-[#666] font-mono">{preparedBy}</p>
+              <p className="flex h-9 items-center border-2 border-[#2d2d2d] bg-[#1a1a1a] px-3 text-sm text-[#666] font-mono">{preparedBy}</p>
             </div>
             <div className="space-y-2">
               <Label>Reviewed By</Label>
@@ -399,7 +399,7 @@ export default function MoMPage() {
             </div>
 
             {showPaste && (
-              <div className="space-y-2 border border-[#1e1e1e] p-3 bg-[#111]">
+              <div className="space-y-2 border-2 border-[#2d2d2d] p-3 bg-[#111]">
                 <Label className="text-xs text-[#666]">Paste names (one per line) — from the meeting extension's participant list</Label>
                 <Textarea rows={4} value={pasteText} onChange={e => setPasteText(e.target.value)} placeholder={'Aakarsh Kumar\nPraveen Saravanan\n...'} />
                 <Button type="button" size="sm" onClick={importPasted}><Plus size={14} /> Import</Button>
@@ -409,7 +409,7 @@ export default function MoMPage() {
             {attendees.length > 0 && (
               <div className="space-y-1.5">
                 {attendees.map(a => (
-                  <div key={a.name} className="flex items-center justify-between gap-2 bg-[#1a1a1a] border border-[#1e1e1e] px-3 py-2 text-sm">
+                  <div key={a.name} className="flex items-center justify-between gap-2 bg-[#1a1a1a] border-2 border-[#2d2d2d] px-3 py-2 text-sm">
                     <div className="min-w-0">
                       <span className="text-[#f0f0f0] font-bold">{a.name}</span>
                       {a.role && <span className="text-[#555] ml-2 font-mono text-xs">{a.role}</span>}

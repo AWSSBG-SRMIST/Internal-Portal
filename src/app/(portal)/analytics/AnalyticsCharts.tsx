@@ -115,7 +115,7 @@ export default function AnalyticsCharts({ analytics }: { analytics: AnalyticsRes
             </div>
             <div className="grid grid-cols-3 gap-2 mt-2">
               {pieData.map(item => (
-                <div key={item.name} className="flex flex-col items-center gap-1 bg-[#1a1a1a] border border-[#2d2d2d] py-2">
+                <div key={item.name} className="flex flex-col items-center gap-1 bg-[#1a1a1a] border-2 border-[#2d2d2d] py-2">
                   <span className="flex items-center gap-1.5 text-xs text-[#888] font-mono">
                     <span className="w-2 h-2 flex-shrink-0" style={{ background: item.color }} />
                     {item.name}

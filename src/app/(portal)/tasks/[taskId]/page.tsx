@@ -268,7 +268,7 @@ export default function TaskDetailPage({ params }: { params: Promise<{ taskId: s
               </div>
             )}
             {mySubmission.reviewFeedback && (
-              <div className="border border-[#2d2d2d] bg-[#1a1a1a] p-3 text-sm text-[#d0d0d0]">
+              <div className="border-2 border-[#2d2d2d] bg-[#1a1a1a] p-3 text-sm text-[#d0d0d0]">
                 <p className="text-xs font-bold text-[#888] uppercase tracking-wide mb-1">Reviewer Feedback</p>
                 <p className="whitespace-pre-wrap font-mono">{mySubmission.reviewFeedback}</p>
               </div>
@@ -465,7 +465,7 @@ export default function TaskDetailPage({ params }: { params: Promise<{ taskId: s
                   </div>
                 )}
                 {sub.reviewStatus !== 'PENDING' && sub.reviewFeedback && (
-                  <div className="border border-[#2d2d2d] bg-[#1a1a1a] p-3 text-sm text-[#d0d0d0]">
+                  <div className="border-2 border-[#2d2d2d] bg-[#1a1a1a] p-3 text-sm text-[#d0d0d0]">
                     <p className="text-xs font-bold text-[#888] uppercase tracking-wide mb-1">Reviewer Feedback</p>
                     <p className="whitespace-pre-wrap font-mono">{sub.reviewFeedback}</p>
                   </div>
